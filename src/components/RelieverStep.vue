@@ -1,0 +1,219 @@
+<script setup>
+import { ref, computed } from 'vue';
+import Icon from './Icon.vue';
+import { DAYS, DAY_NAMES, fmtRange, swapTeam, niceName, initialsOf } from '../lib/schedule.js';
+import { rankCandidates, generatePieces, pieceKey } from '../lib/reliever.js';
+import { formatDate } from '../lib/message.js';
+import { state, setResult, ask, showToast } from '../store.js';
+
+const STATUS_LABEL = { leave: 'on leave', absent: 'absent' };
+const notes = ref({}); // pieceKey -> why this person was picked
+const open = ref(null); // pieceKey whose "next best" list is open
+const showBusy = ref({}); // pieceKey -> also list people who are not free
+const touched = ref(false); // the person changed something by hand
+
+const me = computed(() => state.me);
+const mine = computed(() => state.model.sas.find((s) => s.name === me.value?.name));
+const use24 = computed(() => state.prefs.use24);
+
+const hoursOf = (asg, list) => {
+  const load = {};
+  list.forEach((p) => { const n = asg[pieceKey(p)]; if (n) load[n] = (load[n] || 0) + (p.end - p.start); });
+  return load;
+};
+const load = computed(() => hoursOf(state.assignments, state.pieces));
+
+function regenerate({ absent = state.absent, dates = state.dates, shuffle = false, model = state.model } = {}) {
+  const avoid = shuffle ? new Set(Object.values(state.assignments).filter(Boolean)) : new Set();
+  const meNow = model.sas.find((s) => s.name === me.value?.name) || mine.value;
+  if (!meNow) return;
+  const shifts = meNow.shifts.filter((s) => s.type === 'duty' && state.days.includes(s.day));
+  notes.value = {}; open.value = null;
+  setResult(generatePieces({ model, me: me.value, shifts, dates, absent, avoid, random: shuffle, labs: state.labs }));
+}
+
+/** Re-running the automatic pick throws away manual choices, so ask first. */
+async function confirmDiscard(what) {
+  if (!touched.value) return true;
+  const ok = await ask({ title: `${what}?`, text: 'Your manual choices, Leave/Absent marks and notes for this review will be replaced by a fresh automatic pick.', okLabel: what, danger: true });
+  if (ok) touched.value = false;
+  return ok;
+}
+
+async function changeDate(day, value) {
+  if (!value || value === state.dates[day]) return;
+  if (!(await confirmDiscard('Change date'))) return;
+  const dates = { ...state.dates, [day]: value };
+  state.dates = dates;
+  regenerate({ dates });
+}
+
+async function reshuffle() {
+  if (!(await confirmDiscard('Regenerate'))) return;
+  regenerate({ shuffle: true });
+  showToast('New reliever picks generated.');
+}
+
+// The sheet lists two names per block; if left/right are the other way round, swap the pair.
+async function swapBlock(name) {
+  if (!(await confirmDiscard('Swap columns'))) return;
+  const model = swapTeam(state.model, name);
+  state.model = model;
+  regenerate({ model });
+}
+
+/** Leave / Absent: only that person's slots on that date are re-filled with the best free S.A. */
+function markUnavailable(date, name, status) {
+  const absent = { ...state.absent, [`${date}|${name}`]: status };
+  state.absent = absent;
+  touched.value = true;
+  const list = [...state.pieces];
+  const asg = { ...state.assignments };
+  const nextNotes = { ...notes.value };
+  for (const p of state.pieces.filter((x) => state.dates[x.day] === date && state.assignments[pieceKey(x)] === name)) {
+    delete asg[pieceKey(p)];
+    const sub = generatePieces({
+      model: state.model, me: me.value, shifts: [p], dates: state.dates, absent,
+      avoid: new Set([name]), load0: hoursOf(asg, list), labs: [],
+    });
+    list.splice(list.findIndex((x) => pieceKey(x) === pieceKey(p)), 1, ...sub.pieces);
+    sub.pieces.forEach((np) => {
+      const who = sub.assignments[pieceKey(np)] || null;
+      asg[pieceKey(np)] = who;
+      nextNotes[pieceKey(np)] = who
+        ? `${niceName(name)} is ${STATUS_LABEL[status]}. Replaced automatically with the best match.`
+        : `${niceName(name)} is ${STATUS_LABEL[status]} and nobody else is free for this time.`;
+    });
+  }
+  notes.value = nextNotes;
+  open.value = null;
+  setResult({ pieces: list, assignments: asg });
+}
+
+function setPiece(key, name) {
+  touched.value = true;
+  setResult({ pieces: state.pieces, assignments: { ...state.assignments, [key]: name } });
+  open.value = null;
+}
+
+const hasTeam = (name) => !!state.model.sas.find((s) => s.name === name)?.team;
+const missing = computed(() => state.pieces.filter((p) => !state.assignments[pieceKey(p)]).length);
+const closedDays = computed(() => state.days.filter((d) => !state.pieces.some((p) => p.day === d)));
+
+/** Everything a row needs, computed once per render. */
+const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day) => ({
+  day,
+  date: state.dates[day] || '',
+  rows: state.pieces.filter((p) => p.day === day).map((p) => {
+    const key = pieceKey(p);
+    const date = state.dates[day] || '';
+    const cands = rankCandidates({ model: state.model, me: me.value, piece: p, dateKey: date, absent: state.absent, load: load.value });
+    const current = state.assignments[key] || '';
+    return {
+      key, p, date, current,
+      cur: cands.find((c) => c.name === current),
+      alternatives: cands.filter((c) => c.free && !c.status && c.name !== current).slice(0, 4),
+      others: cands.filter((c) => c.name !== current && (!c.free || c.status)),
+    };
+  }),
+})));
+</script>
+
+<template>
+  <section v-if="mine" class="card">
+    <div class="card-head">
+      <span class="badge-icon"><Icon name="swap" /></span>
+      <div>
+        <h2>Review reliever</h2>
+        <p class="muted">FreeVer picks the best free student assistant for each time. Press Leave or Absent and the replacement is chosen automatically.</p>
+      </div>
+    </div>
+    <p v-if="state.labs.length" class="notice">
+      <Icon name="clock" :size="16" /> A reliever is only needed while a laboratory is open (from the laboratory schedule).
+    </p>
+
+    <div v-for="d in days" :key="d.day" class="daybox">
+      <div class="row between wrap">
+        <h3>{{ DAY_NAMES[d.day] }}</h3>
+        <label class="inline">
+          <Icon name="calendar" :size="16" />
+          <input type="date" :value="d.date" @change="changeDate(d.day, $event.target.value)" />
+        </label>
+      </div>
+      <div v-if="d.date" class="muted small">{{ formatDate(d.date) }}</div>
+      <p v-if="closedDays.includes(d.day)" class="muted small">No laboratory is open during your duty on this day, so no reliever is needed.</p>
+
+      <div v-for="r in d.rows" :key="r.key" class="shiftrow">
+        <div class="time"><Icon name="clock" :size="15" /> {{ fmtRange(r.p.start, r.p.end, use24) }}</div>
+
+        <div v-if="r.cur" class="person">
+          <span class="avatar">{{ initialsOf(r.cur.name) }}</span>
+          <div class="who2">
+            <b>{{ niceName(r.cur.name) }}</b>
+            <div class="chipline">
+              <span v-if="r.cur.free" class="pill ok">Free the whole time</span>
+              <span v-else class="pill bad">Not free</span>
+              <span v-if="r.cur.partner" class="pill">Block partner</span>
+              <span v-if="r.cur.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="person none">
+          <span class="avatar">?</span>
+          <div class="who2"><b>No reliever</b><div class="chipline"><span class="pill bad">Nobody is free</span></div></div>
+        </div>
+
+        <div class="rowtools">
+          <div v-if="r.cur && r.date" class="seggroup">
+            <span class="seg on available" aria-label="Currently available">Available</span>
+            <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'leave')">Leave</button>
+            <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'absent')">Absent</button>
+          </div>
+          <button :disabled="!r.alternatives.length && !r.others.length && !r.current" :aria-expanded="open === r.key" @click="open = open === r.key ? null : r.key">
+            <Icon name="refresh" :size="14" /> Change
+          </button>
+        </div>
+
+        <div v-if="notes[r.key]" class="note small"><Icon name="sparkles" :size="14" /> {{ notes[r.key] }}</div>
+
+        <div v-if="open === r.key" class="alts">
+          <div class="muted small">Next best matches (free for this whole time):</div>
+          <button v-for="a in r.alternatives" :key="a.name" class="alt" @click="setPiece(r.key, a.name)">
+            <span class="avatar sm">{{ initialsOf(a.name) }}</span>
+            <b>{{ niceName(a.name) }}</b>
+            <span v-if="a.partner" class="pill">Block partner</span>
+            <span class="muted small">{{ Math.round((a.load || 0) / 60) }}h assigned</span>
+          </button>
+          <span v-if="!r.alternatives.length" class="muted small">Nobody else is free for this whole time.</span>
+          <button v-if="r.others.length" class="link small" :aria-expanded="!!showBusy[r.key]" @click="showBusy = { ...showBusy, [r.key]: !showBusy[r.key] }">
+            {{ showBusy[r.key] ? 'Hide' : 'Show' }} people who are busy or unavailable ({{ r.others.length }})
+          </button>
+          <template v-if="showBusy[r.key]">
+            <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="setPiece(r.key, a.name)">
+              <span class="avatar sm">{{ initialsOf(a.name) }}</span>
+              <b>{{ niceName(a.name) }}</b>
+              <span v-if="a.status" class="pill bad">{{ STATUS_LABEL[a.status] }}</span>
+              <span v-else class="pill bad">Busy: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
+            </button>
+          </template>
+          <button v-if="r.current" class="link small" @click="setPiece(r.key, null)">Remove reliever</button>
+        </div>
+
+        <div v-if="r.cur && !r.cur.free" class="warn small row gap">
+          <Icon name="alert" :size="14" />
+          {{ niceName(r.cur.name) }} is busy: {{ r.cur.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}
+        </div>
+        <button v-if="r.cur && hasTeam(r.cur.name)" class="link small" @click="swapBlock(r.cur.name)">
+          Columns look swapped? Swap this person with their block partner
+        </button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button @click="state.step = 1"><Icon name="left" :size="16" /> Back</button>
+      <button @click="reshuffle"><Icon name="refresh" :size="16" /> Regenerate</button>
+      <button class="primary" @click="state.step = 3">Create message <Icon name="right" :size="16" /></button>
+    </div>
+    <p v-if="missing > 0" class="muted small">{{ missing }} time slot(s) still have no reliever.</p>
+  </section>
+</template>
