@@ -19,6 +19,7 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
    VITE_SUPABASE_ANON_KEY=eyJ...
    ```
    The anon key is public by design; the data is protected by row level security.
+   If you deployed the AI function under a different name (the dashboard editor may call it something like `bright-task`), add `VITE_AI_FUNCTION=that-name` here.
 5. **AI (optional but recommended)** - needs the [Supabase CLI](https://supabase.com/docs/guides/cli):
    ```
    supabase login

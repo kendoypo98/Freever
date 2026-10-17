@@ -2,8 +2,9 @@ import { supabase } from './supabase.js';
 import { normalizeModel, normalizeLabs } from './schedule.js';
 
 // All AI calls go through the "ai" Supabase Edge Function so no API key ever reaches the browser.
+const FUNCTION_NAME = import.meta.env.VITE_AI_FUNCTION || 'ai'; // set VITE_AI_FUNCTION if the function was deployed under another name
 async function invoke(body) {
-  const { data, error } = await supabase.functions.invoke('ai', { body });
+  const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, { body });
   if (error) {
     if (error.name === 'FunctionsFetchError') {
       throw new Error('could not reach the AI function. Deploy the "ai" function with "Verify JWT" turned off (see the README), and check it is in the same Supabase project as this app');
