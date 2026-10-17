@@ -1,3 +1,4 @@
+// @ts-nocheck -- this file runs on Deno (Supabase Edge Functions); the editor checks it as Node and cannot see Deno or npm: imports.
 // Supabase Edge Function "ai": keeps the Groq key on the server.
 // Deploy: supabase functions deploy ai      Secret: supabase secrets set GROQ_API_KEY=...
 import { createClient } from 'npm:@supabase/supabase-js@2';
