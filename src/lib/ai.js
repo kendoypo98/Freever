@@ -5,6 +5,9 @@ import { normalizeModel, normalizeLabs } from './schedule.js';
 async function invoke(body) {
   const { data, error } = await supabase.functions.invoke('ai', { body });
   if (error) {
+    if (error.name === 'FunctionsFetchError') {
+      throw new Error('could not reach the AI function. Deploy the "ai" function with "Verify JWT" turned off (see the README), and check it is in the same Supabase project as this app');
+    }
     let msg = error.message;
     try { msg = (await error.context.json()).error || msg; } catch { /* keep default */ }
     throw new Error(msg);

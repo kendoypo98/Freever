@@ -1,0 +1,4 @@
+# The "ai" function checks the logged-in user and the admin role itself, so the gateway's JWT check must be off.
+# With it on, the browser's CORS preflight (which carries no token) is rejected and the scan fails.
+[functions.ai]
+verify_jwt = false

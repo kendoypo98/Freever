@@ -24,9 +24,10 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
    supabase login
    supabase link --project-ref <your-project-ref>
    supabase secrets set --env-file supabase/.env      # GEMINI_API_KEY=... (free key from aistudio.google.com/apikey)
-   supabase functions deploy ai
+   supabase functions deploy ai --no-verify-jwt
    ```
    The key lives only on the server and is never in the website.
+   **Verify JWT must be off** for this function (`--no-verify-jwt`, or Edge Functions > ai > Details > turn off "Verify JWT with legacy secret"). The function still requires a logged-in admin; the gateway check only blocks the browser's CORS preflight and causes "blocked by CORS policy" errors.
 
 ## 2. Run
 ```
