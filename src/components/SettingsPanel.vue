@@ -127,10 +127,13 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
 
     <div v-show="tab === 'message'" id="pane-message" role="tabpanel" aria-labelledby="tab-message">
     <h3>Message template</h3>
-    <label v-for="k in ['greeting', 'intro', 'closing']" :key="k">{{ k[0].toUpperCase() + k.slice(1) }}
-      <textarea :rows="k === 'greeting' ? 1 : 2" :value="tpl(k)" @input="setTpl(k, $event.target.value)" />
+    <label>Title ({me} = your first name, {day} = Today or the weekday)
+      <textarea rows="2" :value="tpl('title')" @input="setTpl('title', $event.target.value)" />
     </label>
-    <label>Signature (defaults to your name)
+    <label>Closing line (optional)
+      <textarea rows="2" :value="tpl('closing')" @input="setTpl('closing', $event.target.value)" />
+    </label>
+    <label>Name used for {me} (defaults to your first name)
       <input type="text" :value="tpl('signature')" @input="setTpl('signature', $event.target.value)" />
     </label>
 

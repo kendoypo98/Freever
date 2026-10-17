@@ -95,15 +95,16 @@ const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m %
 const toMin = (s) => { const [h, m] = String(s).split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : 0; };
 
 // placing the picture never needs AI: it is shown beside the time editor
-function handleLab(file) {
+async function handleLab(file) {
   if (!file) return;
   if (!file.type.startsWith('image/')) { labMsg.value = { error: 'Please choose a picture (PNG or JPEG).', warnings: [], saved: false }; return; }
   if (labImage.value) URL.revokeObjectURL(labImage.value);
   labImage.value = URL.createObjectURL(file);
   labFile = file;
   labMsg.value = { error: '', warnings: [], saved: false };
-  if (!state.labs.length) addLab();
   if (labInput.value) labInput.value.value = '';
+  await autoRead(); // the picture is scanned right away; the admin only checks the table
+  if (!state.labs.length) addLab();
 }
 let labFile = null;
 
@@ -119,7 +120,8 @@ function editLab(i, patch) {
 // labs loaded from the database count as saved until the admin edits them
 const labsDirty = ref(false);
 const labsLoaded = computed(() => state.labs.length > 0 && !labsDirty.value);
-const labsValid = computed(() => state.labs.length > 0 && state.labs.every((l) => l.end > l.start));
+const unnamedLabs = computed(() => state.labs.some((l) => !String(l.lab || '').trim()));
+const labsValid = computed(() => state.labs.length > 0 && state.labs.every((l) => l.end > l.start) && !unnamedLabs.value);
 
 // optional: let the AI fill the table from the picture (needs the AI function to be set up)
 async function autoRead() {
@@ -129,9 +131,10 @@ async function autoRead() {
     const { labs, warnings } = await extractLabs(labFile);
     if (!labs.length) throw new Error(warnings[0] || 'No laboratory times were found in that picture.');
     state.labs = labs;
-    labMsg.value = { error: '', warnings, saved: false };
+    labsDirty.value = true;
+    labMsg.value = { error: '', warnings: [...warnings, 'Read from a picture by AI: check each room and time before saving.'], saved: false };
   } catch (e) {
-    labMsg.value = { error: `Auto-read is not available (${e.message}). Type the times from the picture instead.`, warnings: [], saved: false };
+    labMsg.value = { error: `The picture could not be read automatically (${e.message}). Type the rooms and times from the picture instead.`, warnings: [], saved: false };
   } finally { labBusy.value = ''; }
 }
 async function saveLab() {
@@ -209,11 +212,11 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
     <div class="labbox">
       <h3><Icon name="clock" :size="16" /> Laboratory schedule <span class="pill bad">required</span></h3>
       <p class="muted small">
-        Place the picture of the laboratory schedule and type each laboratory's open and close time. A reliever is then only needed while a laboratory is open, and only students who are free at that time are suggested.
+        Choose the picture of the laboratory schedule. FreeVer reads each room and its open hours automatically; check them, then save. Relievers are then listed per room, hour by hour, only while that room is open, and only students who are free at that time are suggested.
       </p>
       <div class="actions tight">
-        <button @click="labInput?.click()"><Icon name="image" :size="16" /> {{ labImage ? 'Replace picture' : 'Place laboratory picture' }}</button>
-        <button v-if="labImage" :disabled="!!labBusy" @click="autoRead"><Icon name="sparkles" :size="16" /> Auto-read with AI (optional)</button>
+        <button @click="labInput?.click()"><Icon name="image" :size="16" /> {{ labImage ? 'Replace picture' : 'Scan laboratory picture' }}</button>
+        <button v-if="labImage" :disabled="!!labBusy" @click="autoRead"><Icon name="sparkles" :size="16" /> Read the picture again</button>
         <input ref="labInput" type="file" hidden accept="image/png,image/jpeg,image/webp" @change="handleLab($event.target.files[0])" />
       </div>
       <p v-if="labBusy" class="notice" role="status"><Icon name="clock" :size="16" /> {{ labBusy }}</p>
@@ -226,7 +229,7 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
         <img v-if="labImage" :src="labImage" alt="Laboratory schedule" class="labimg" />
         <div class="labtable">
           <div v-for="(l, i) in state.labs" :key="i" class="labrow">
-            <input type="text" :value="l.lab" placeholder="Lab (optional)" aria-label="Laboratory name" @input="editLab(i, { lab: $event.target.value })" />
+            <input type="text" :value="l.lab" placeholder="Room, e.g. 5501" aria-label="Laboratory room" @input="editLab(i, { lab: $event.target.value })" />
             <select :value="l.day" aria-label="Day" @change="editLab(i, { day: $event.target.value })">
               <option v-for="d in DAYS" :key="d" :value="d">{{ DAY_NAMES[d] }}</option>
             </select>
@@ -237,6 +240,7 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
           </div>
           <p v-if="!state.labs.length" class="muted small">No laboratory times yet. Place the picture, then add the times.</p>
           <p v-if="state.labs.some((l) => l.end <= l.start)" class="warn small">A closing time must be later than its opening time.</p>
+          <p v-if="unnamedLabs" class="warn small">Name every laboratory room (for example 5501) so relievers can be listed per room.</p>
           <div class="actions tight">
             <button @click="addLab"><Icon name="check" :size="16" /> Add time</button>
             <button class="primary" :disabled="!labsValid || !!labBusy || labMsg.saved" @click="saveLab">

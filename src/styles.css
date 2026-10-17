@@ -425,3 +425,5 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
   .settings-nav { flex-direction: row; overflow-x: auto; position: static; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
   .settings-tab { width: auto; white-space: nowrap; }
 }
+
+.labhead { margin: 1rem 0 .2rem; font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }

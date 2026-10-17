@@ -64,6 +64,15 @@ export function fmtTime(mins, use24 = false) {
   return m ? `${h12}:${String(m).padStart(2, '0')} ${suffix}` : `${h12}:00 ${suffix}`;
 }
 
+/** Messenger style: "7:00am", "12:00nn" (noon), "1:30pm"; 24-hour mode gives "13:30". */
+export function fmtShort(mins, use24 = false) {
+  if (use24) return fmtTime(mins, true);
+  const h = Math.floor(mins / 60) % 24;
+  const m = String(mins % 60).padStart(2, '0');
+  if (h === 12 && m === '00') return '12:00nn';
+  return `${h % 12 === 0 ? 12 : h % 12}:${m}${h >= 12 ? 'pm' : 'am'}`;
+}
+
 export function fmtRange(s, e, use24 = false) {
   return `${fmtTime(s, use24)} – ${fmtTime(e, use24)}`;
 }

@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import Icon from './Icon.vue';
 import { DAYS, DAY_NAMES, fmtRange, swapTeam, niceName, initialsOf } from '../lib/schedule.js';
-import { rankCandidates, generatePieces, pieceKey } from '../lib/reliever.js';
+import { rankCandidates, generateSlots, pickReliever, isOvertime, pieceKey } from '../lib/reliever.js';
 import { formatDate } from '../lib/message.js';
 import { state, setResult, ask, showToast } from '../store.js';
 
@@ -29,7 +29,7 @@ function regenerate({ absent = state.absent, dates = state.dates, shuffle = fals
   if (!meNow) return;
   const shifts = meNow.shifts.filter((s) => s.type === 'duty' && state.days.includes(s.day));
   notes.value = {}; open.value = null;
-  setResult(generatePieces({ model, me: me.value, shifts, dates, absent, avoid, random: shuffle, labs: state.labs }));
+  setResult(generateSlots({ model, me: me.value, shifts, dates, absent, avoid, random: shuffle, labs: state.labs }));
 }
 
 /** Re-running the automatic pick throws away manual choices, so ask first. */
@@ -67,27 +67,22 @@ function markUnavailable(date, name, status) {
   const absent = { ...state.absent, [`${date}|${name}`]: status };
   state.absent = absent;
   touched.value = true;
-  const list = [...state.pieces];
   const asg = { ...state.assignments };
   const nextNotes = { ...notes.value };
   for (const p of state.pieces.filter((x) => state.dates[x.day] === date && state.assignments[pieceKey(x)] === name)) {
     delete asg[pieceKey(p)];
-    const sub = generatePieces({
-      model: state.model, me: me.value, shifts: [p], dates: state.dates, absent,
-      avoid: new Set([name]), load0: hoursOf(asg, list), labs: [],
+    const who = pickReliever({
+      model: state.model, me: me.value, slot: p, dateKey: date, absent,
+      load: hoursOf(asg, state.pieces), avoid: new Set([name]),
     });
-    list.splice(list.findIndex((x) => pieceKey(x) === pieceKey(p)), 1, ...sub.pieces);
-    sub.pieces.forEach((np) => {
-      const who = sub.assignments[pieceKey(np)] || null;
-      asg[pieceKey(np)] = who;
-      nextNotes[pieceKey(np)] = who
-        ? `${niceName(name)} is ${STATUS_LABEL[status]}. Replaced automatically with the best match.`
-        : `${niceName(name)} is ${STATUS_LABEL[status]} and nobody else is free for this time.`;
-    });
+    asg[pieceKey(p)] = who;
+    nextNotes[pieceKey(p)] = who
+      ? `${niceName(name)} is ${STATUS_LABEL[status]}. Replaced automatically with the best match.`
+      : `${niceName(name)} is ${STATUS_LABEL[status]} and nobody else is free for this time.`;
   }
   notes.value = nextNotes;
   open.value = null;
-  setResult({ pieces: list, assignments: asg });
+  setResult({ pieces: state.pieces, assignments: asg });
 }
 
 function setPiece(key, name) {
@@ -100,23 +95,30 @@ const hasTeam = (name) => !!state.model.sas.find((s) => s.name === name)?.team;
 const missing = computed(() => state.pieces.filter((p) => !state.assignments[pieceKey(p)]).length);
 const closedDays = computed(() => state.days.filter((d) => !state.pieces.some((p) => p.day === d)));
 
-/** Everything a row needs, computed once per render. */
-const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day) => ({
-  day,
-  date: state.dates[day] || '',
-  rows: state.pieces.filter((p) => p.day === day).map((p) => {
-    const key = pieceKey(p);
-    const date = state.dates[day] || '';
-    const cands = rankCandidates({ model: state.model, me: me.value, piece: p, dateKey: date, absent: state.absent, load: load.value });
-    const current = state.assignments[key] || '';
-    return {
-      key, p, date, current,
-      cur: cands.find((c) => c.name === current),
-      alternatives: cands.filter((c) => c.free && !c.status && c.name !== current).slice(0, 4),
-      others: cands.filter((c) => c.name !== current && (!c.free || c.status)),
-    };
-  }),
-})));
+/** Everything a row needs, grouped day -> laboratory room, computed once per render. */
+const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day) => {
+  const date = state.dates[day] || '';
+  const dayPieces = state.pieces.filter((p) => p.day === day);
+  const labNames = [...new Set(dayPieces.map((p) => p.lab))];
+  return {
+    day, date,
+    labs: labNames.map((lab) => ({
+      lab,
+      rows: dayPieces.filter((p) => p.lab === lab).map((p) => {
+        const key = pieceKey(p);
+        const cands = rankCandidates({ model: state.model, me: me.value, piece: p, dateKey: date, absent: state.absent, load: load.value });
+        const current = state.assignments[key] || '';
+        const cur = cands.find((c) => c.name === current);
+        return {
+          key, p, date, current, cur,
+          ot: !!cur && isOvertime(state.model.sas.find((s) => s.name === current), p),
+          alternatives: cands.filter((c) => c.free && !c.status && c.name !== current).slice(0, 4),
+          others: cands.filter((c) => c.name !== current && (!c.free || c.status)),
+        };
+      }),
+    })),
+  };
+}));
 </script>
 
 <template>
@@ -128,8 +130,11 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
         <p class="muted">FreeVer picks the best free student assistant for each time. Press Leave or Absent and the replacement is chosen automatically.</p>
       </div>
     </div>
-    <p v-if="state.labs.length" class="notice">
-      <Icon name="clock" :size="16" /> A reliever is only needed while a laboratory is open (from the laboratory schedule).
+    <p v-if="!state.labs.length" class="notice err" role="alert">
+      <Icon name="alert" :size="16" /> The laboratory schedule has not been saved yet, so there is nothing to cover. Ask the admin to import it.
+    </p>
+    <p v-else class="notice">
+      <Icon name="clock" :size="16" /> One list per laboratory room, one hour per line, only while that room is open. <b>OT</b> = the reliever is outside their own duty hours.
     </p>
 
     <div v-for="d in days" :key="d.day" class="daybox">
@@ -143,7 +148,9 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
       <div v-if="d.date" class="muted small">{{ formatDate(d.date) }}</div>
       <p v-if="closedDays.includes(d.day)" class="muted small">No laboratory is open during your duty on this day, so no reliever is needed.</p>
 
-      <div v-for="r in d.rows" :key="r.key" class="shiftrow">
+      <template v-for="L in d.labs" :key="L.lab">
+      <h4 class="labhead">Room {{ L.lab }}</h4>
+      <div v-for="r in L.rows" :key="r.key" class="shiftrow">
         <div class="time"><Icon name="clock" :size="15" /> {{ fmtRange(r.p.start, r.p.end, use24) }}</div>
 
         <div v-if="r.cur" class="person">
@@ -154,6 +161,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
               <span v-if="r.cur.free" class="pill ok">Free the whole time</span>
               <span v-else class="pill bad">Not free</span>
               <span v-if="r.cur.partner" class="pill">Block partner</span>
+              <span v-if="r.ot" class="pill bad" title="Covering outside their own duty hours">OT</span>
               <span v-if="r.cur.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</span>
             </div>
           </div>
@@ -207,6 +215,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
           Columns look swapped? Swap this person with their block partner
         </button>
       </div>
+      </template>
     </div>
 
     <div class="actions">

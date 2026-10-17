@@ -39,7 +39,18 @@ Tip: if the project lives in a OneDrive/Dropbox folder, exclude `node_modules` f
 
 ## 3. First use
 - **The first account created becomes the admin**, so create yours first. If you set an admin setup code (step 1), the Create account form asks for it on that first account only.
-- The admin imports the Excel file (ITO DEPARTMENT sheet: yellow = duty, blue = class) and presses **Save to database**. Everyone else then registers with their **Student ID** and **S.A name** (the name must match the schedule) and logs in with either.
+- **Admin, once:** import the S.A schedule (ITO DEPARTMENT sheet: yellow = duty, blue = class) and press **Save to database**. Then choose the **Laboratory Schedule picture**: FreeVer reads every room and its open hours automatically (needs the AI function, step 5). Check the table, make sure each row has a room name (for example `5501`), and press **Save laboratory schedule**.
+- **Every S.A:** register with your **Student ID** and **S.A name** (it must match the schedule), log in, pick the day(s) Monday-Saturday, and FreeVer compares each room's open hours with everyone's duty and class hours. It builds an hourly list per room, rotating the names. A name with **(OT)** is covering outside their own duty hours.
+- Review the list (Leave/Absent re-picks the hour automatically; Change lets you choose anyone), then copy the message, which looks like this:
+  ```
+  @LJ's Temporary Relievers for Today
+
+  (5501)
+  7:00am - 8:00am — @Angelica
+  8:00am - 9:00am — @Marianne
+  9:00am - 10:00am — @Andrei (OT)
+  ```
+  You can change the title and closing line in Settings > Message.
 - Column order: by default the **first name of each pair is the right column**. Untick the box on the import screen to read it the other way. In the review screen each reliever has a "Columns look swapped?" link for a single block (this change is only for your session).
 
 ## Privacy and security notes

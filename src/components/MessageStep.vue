@@ -5,7 +5,7 @@ import { buildMessage } from '../lib/message.js';
 import { state, resetFlow } from '../store.js';
 
 const generated = computed(() => buildMessage({
-  me: state.me, pieces: state.pieces, assignments: state.assignments, dates: state.dates, tpl: state.prefs.tpl, use24: state.prefs.use24,
+  me: state.me, pieces: state.pieces, assignments: state.assignments, dates: state.dates, tpl: state.prefs.tpl, use24: state.prefs.use24, model: state.model,
 }));
 const text = ref(generated.value);
 const copied = ref(false);

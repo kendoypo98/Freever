@@ -6,7 +6,7 @@ import { getProfile, logout as signOut } from './lib/auth.js';
 import { loadSchedule, loadLabs } from './lib/db.js';
 import { configured, supabase } from './lib/supabase.js';
 import { DAYS } from './lib/schedule.js';
-import { generatePieces } from './lib/reliever.js';
+import { generateSlots } from './lib/reliever.js';
 
 export const state = reactive({
   profile: undefined, // undefined = checking the session, null = logged out
@@ -84,7 +84,7 @@ export async function loadData() {
 // ----- the wizard survives a refresh (kept per account in this browser) -----
 let restoring = false;
 function restoreFlow() {
-  const w = load('wizard', null);
+  const w = load('wizard2', null);
   if (!w || !state.model || state.me) return;
   if (!state.model.sas.some((s) => s.name === w.me?.name)) return;
   restoring = true;
@@ -95,7 +95,7 @@ function restoreFlow() {
 }
 watch(() => [state.me, state.days, state.dates, state.absent, state.pieces, state.assignments, state.step], () => {
   if (!state.profile || restoring || !state.me) return; // cleared only by resetFlow, so enter() cannot wipe it before restoreFlow runs
-  save('wizard', { me: state.me, days: state.days, dates: state.dates, absent: state.absent, pieces: state.pieces, assignments: state.assignments, step: state.step });
+  save('wizard2', { me: state.me, days: state.days, dates: state.dates, absent: state.absent, pieces: state.pieces, assignments: state.assignments, step: state.step });
 }, { deep: true });
 
 /** Called once a profile is known (after the session check or a login). */
@@ -157,12 +157,12 @@ export function generate() {
   });
   state.dates = dates;
   const duty = mine.shifts.filter((s) => s.type === 'duty' && state.days.includes(s.day));
-  setResult(generatePieces({ model: state.model, me: state.me, shifts: duty, dates, absent: state.absent, labs: state.labs }));
+  setResult(generateSlots({ model: state.model, me: state.me, shifts: duty, dates, absent: state.absent, labs: state.labs }));
   state.step = 2;
 }
 
 export function resetFlow() {
-  remove('wizard');
+  remove('wizard2');
   state.step = isAdmin() ? 0 : 1;
   state.me = null; state.days = []; state.dates = {}; state.absent = {}; state.pieces = []; state.assignments = {};
 }

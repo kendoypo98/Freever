@@ -1,28 +1,29 @@
-import { overlaps } from './schedule.js';
+import { overlaps, DAYS } from './schedule.js';
 
-export const pieceKey = (p) => `${p.day}|${p.start}|${p.end}`;
+/** One reliever slot = one lab room, one day, at most one clock hour. */
+export const pieceKey = (p) => `${p.day}|${p.lab || ''}|${p.start}|${p.end}`;
 
 /**
- * A reliever is only needed while a laboratory is open. Cut each duty shift down to the times
- * when at least one lab is in use that day. With no lab schedule loaded, shifts are left alone.
+ * A reliever is only needed while a laboratory is open. For every laboratory room open on the
+ * day of a duty shift, cut the overlap into slots that never cross a clock hour (7:30-8:00, 8:00-9:00 ...).
+ * Without a laboratory schedule there is nothing to cover, so the result is empty.
  */
-export function clipToLabs(shifts, labs) {
-  if (!labs?.length) return shifts;
+export function buildSlots(shifts, labs) {
+  const seen = new Set();
   const out = [];
   for (const s of shifts) {
-    const wins = labs
-      .filter((l) => l.day === s.day)
-      .map((l) => ({ start: Math.max(l.start, s.start), end: Math.min(l.end, s.end) }))
-      .filter((w) => w.end > w.start)
-      .sort((a, b) => a.start - b.start);
-    const merged = [];
-    for (const w of wins) {
-      const last = merged[merged.length - 1];
-      if (last && w.start <= last.end) last.end = Math.max(last.end, w.end); else merged.push({ ...w });
+    for (const l of (labs || []).filter((x) => x.day === s.day)) {
+      const from = Math.max(l.start, s.start);
+      const to = Math.min(l.end, s.end);
+      for (let pos = from; pos < to;) {
+        const next = Math.min(to, (Math.floor(pos / 60) + 1) * 60);
+        const slot = { day: s.day, lab: l.lab || 'Lab', start: pos, end: next, note: s.note };
+        if (!seen.has(pieceKey(slot))) { seen.add(pieceKey(slot)); out.push(slot); }
+        pos = next;
+      }
     }
-    for (const w of merged) out.push({ ...s, start: w.start, end: w.end });
   }
-  return out;
+  return out.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.lab.localeCompare(b.lab) || a.start - b.start);
 }
 
 export const isPartner = (sa, me) => !!me.team && sa.team === me.team && sa.name !== me.name;
@@ -75,82 +76,46 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
   return list;
 }
 
-const shuffle = (arr) => {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
+/**
+ * Overtime: the reliever covers a time that is outside their own duty. A block partner who is
+ * already on duty at the same post during the slot is not overtime.
+ */
+export const isOvertime = (sa, slot) =>
+  !sa.shifts.some((s) => s.type === 'duty' && s.day === slot.day && s.start <= slot.start && s.end >= slot.end);
 
 /**
- * Cover each duty shift of `me` with SAs who are FREE (no duty, no class) at that time.
- * If nobody is free for the whole shift it is split into pieces, each covered by whoever
- * is free the longest; stretches nobody can cover stay unassigned (TBD).
- *  - avoid: names to avoid when there is an alternative (used by "Regenerate")
- *  - random: shuffle ties so every regenerate can give a different valid result
+ * Best reliever for one slot, or null when nobody is free for the whole slot.
+ *  - avoid: names to skip when someone else is free (rotation / "next person")
+ *  - random: pick among equally good people so Regenerate can give another valid result
  */
-export function generatePieces({ model, me, shifts: allShifts, dates, absent, avoid = new Set(), random = false, labs = [], load0 = {} }) {
-  const shifts = clipToLabs(allShifts, labs);
-  const load = { ...load0 };
-  const pieces = [];
+export function pickReliever({ model, me, slot, dateKey, absent, load, avoid = new Set(), random = false }) {
+  const free = rankCandidates({ model, me, piece: slot, dateKey, absent, load }).filter((c) => c.free && !c.status);
+  if (!free.length) return null;
+  // the block partner is the natural cover and is never rotated away
+  const fresh = free.filter((c) => c.partner || !avoid.has(c.name));
+  const pool = fresh.length ? fresh : free;
+  const best = pool[0];
+  const ties = pool.filter((c) => c.partner === best.partner && c.load === best.load);
+  return (random ? ties[Math.floor(Math.random() * ties.length)] : best).name;
+}
+
+/**
+ * Hourly relievers per laboratory room for the duty shifts of `me`.
+ * Names rotate from one hour to the next when more than one person is free. Returns { pieces, assignments }
+ * where pieces are the slots and assignments maps pieceKey -> name (null = nobody free).
+ */
+export function generateSlots({ model, me, shifts, dates, absent, labs, avoid = new Set(), random = false, load0 = {} }) {
+  const pieces = buildSlots(shifts, labs);
   const assignments = {};
-  const others = model.sas.filter((s) => s.name !== me.name);
-
-  for (const shift of shifts) {
-    const dateKey = dates[shift.day];
-    const pool = others.filter((s) => !absent[`${dateKey}|${s.name}`]);
-    let pos = shift.start;
-
-    while (pos < shift.end) {
-      const info = (random ? shuffle(pool) : pool).map((sa) => {
-        const busy = busyBlocks(sa, me).filter((s) => s.day === shift.day && s.end > pos);
-        if (busy.some((s) => s.start <= pos)) {
-          return { sa, ext: 0, freeAt: Math.min(...busy.filter((s) => s.start <= pos).map((s) => s.end)) };
-        }
-        const next = Math.min(shift.end, ...busy.map((s) => s.start));
-        return { sa, ext: next - pos, freeAt: pos };
-      });
-      const maxExt = Math.max(0, ...info.map((i) => i.ext));
-
-      if (maxExt === 0) {
-        // nobody free: leave a TBD gap until the first person becomes free (or the shift ends)
-        const nextFree = Math.min(shift.end, ...info.map((i) => i.freeAt).filter((t) => t > pos));
-        const end = Number.isFinite(nextFree) ? nextFree : shift.end;
-        const prev = pieces[pieces.length - 1];
-        if (prev && prev.day === shift.day && prev.end === pos && assignments[pieceKey(prev)] === null) {
-          delete assignments[pieceKey(prev)]; // extend the previous TBD gap
-          prev.end = end;
-          assignments[pieceKey(prev)] = null;
-        } else {
-          const p = { day: shift.day, start: pos, end, note: shift.note };
-          pieces.push(p);
-          assignments[pieceKey(p)] = null;
-        }
-        pos = end;
-        continue;
-      }
-
-      const need = shift.end - pos;
-      const threshold = maxExt >= need ? need : Math.max(Math.min(60, maxExt), maxExt * 0.75);
-      let group = info.filter((i) => i.ext >= threshold);
-      const fresh = group.filter((i) => !avoid.has(i.sa.name));
-      if (fresh.length) group = fresh;
-      // the block partner is the natural cover; otherwise spread the load fairly
-      const partners = group.filter((g) => isPartner(g.sa, me));
-      if (partners.length && !partners.every((g) => avoid.has(g.sa.name))) group = partners;
-      group.sort((a, b) => (load[a.sa.name] || 0) - (load[b.sa.name] || 0) || b.ext - a.ext);
-      const lowest = load[group[0].sa.name] || 0;
-      const top = group.filter((g) => (load[g.sa.name] || 0) === lowest);
-      const pick = random ? top[Math.floor(Math.random() * top.length)] : top[0];
-
-      const p = { day: shift.day, start: pos, end: pos + pick.ext, note: shift.note };
-      pieces.push(p);
-      assignments[pieceKey(p)] = pick.sa.name;
-      load[pick.sa.name] = (load[pick.sa.name] || 0) + pick.ext;
-      pos += pick.ext;
-    }
+  const load = { ...load0 };
+  let prev = null; // { day, lab, name } of the previous slot, for rotation
+  for (const slot of pieces) {
+    const rotate = new Set(avoid);
+    if (prev && prev.day === slot.day && prev.lab === slot.lab && prev.name) rotate.add(prev.name);
+    const name = pickReliever({ model, me, slot, dateKey: dates[slot.day], absent, load, avoid: rotate, random });
+    assignments[pieceKey(slot)] = name;
+    if (name) load[name] = (load[name] || 0) + (slot.end - slot.start);
+    prev = { day: slot.day, lab: slot.lab, name };
   }
   return { pieces, assignments };
 }
