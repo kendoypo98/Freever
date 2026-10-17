@@ -23,7 +23,7 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
    ```
    supabase login
    supabase link --project-ref <your-project-ref>
-   supabase secrets set --env-file supabase/.env      # GROQ_API_KEY=... (free key from console.groq.com/keys)
+   supabase secrets set --env-file supabase/.env      # GEMINI_API_KEY=... (free key from aistudio.google.com/apikey)
    supabase functions deploy ai
    ```
    The key lives only on the server and is never in the website.
@@ -57,7 +57,7 @@ Tip: if the project lives in a OneDrive/Dropbox folder, exclude `node_modules` f
 - Names of other students are never listed: you only see your own name and the relievers you pick.
 - Database access is limited by row level security: any logged-in S.A can *read* the schedule (needed to work out who is free); only the admin can change it. The schedule data is therefore visible to logged-in users who inspect network traffic.
 - The AI function is for the **admin only**, limits image size, and limits requests per minute (counted in the database, so it holds across server instances). Schedule checks send students as S1, S2... (no names).
-- **Keep `supabase/.env` out of synced/shared folders** and never commit it. It only needs `GROQ_API_KEY`; remove `SUPABASE_SECRET_KEY` from it (nothing uses it) and rotate any key that was ever shared. Optional: set `GROQ_VISION_MODEL` / `GROQ_TEXT_MODEL` secrets if Groq renames its models.
+- **Keep `supabase/.env` out of synced/shared folders** and never commit it. It only needs `GEMINI_API_KEY`; remove `SUPABASE_SECRET_KEY` from it (nothing uses it) and rotate any key that was ever shared. Optional: set the `GEMINI_MODEL` secret (default `gemini-2.5-flash`) if Google renames or retires the model.
 - **Forgot password?** The admin opens Settings > "Help a student who forgot their password" and sets a temporary password. Students can change their own password in Settings.
 - Sign-in does not reveal whether a Student ID or name exists. Registration still has to say when an ID or name is already taken.
 - A Content-Security-Policy is added to the production build. Dependencies: `npm audit` reports 0 vulnerabilities (SheetJS is installed from cdn.sheetjs.com, the patched source).
