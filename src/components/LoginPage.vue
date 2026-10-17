@@ -72,7 +72,7 @@ function setMode(m) {
           Kapag may kailangan ka, <span class="opacity-75">mag pareliever ka.</span>
         </p>
         <ul class="mt-6 hidden gap-3 text-[0.95rem] opacity-95 lg:grid">
-          <li class="flex items-center gap-2.5"><Icon name="check" :size="16" /> Detects who is free from duty and class hours</li>
+          <li class="flex items-center gap-2.5"><Icon name="check" :size="16" /> Finds who is on duty and out of class</li>
           <li class="flex items-center gap-2.5"><Icon name="check" :size="16" /> Replaces a reliever on leave automatically</li>
           <li class="flex items-center gap-2.5"><Icon name="check" :size="16" /> Messenger-ready message, one click to copy</li>
         </ul>

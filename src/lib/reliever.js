@@ -29,23 +29,22 @@ export function buildSlots(shifts, labs) {
 export const isPartner = (sa, me) => !!me.team && sa.team === me.team && sa.name !== me.name;
 
 /**
- * Blocks that make `sa` unavailable to relieve `me`.
- * White cells = free. Blue (class) always blocks. Yellow (duty) blocks too, EXCEPT for the
- * block partner: the two students of one block share the same post, so a partner whose duty
- * overlaps yours is already at that post and can cover.
+ * Blocks that make `sa` unavailable to relieve `me`: class hours (blue) only.
+ * Yellow = the student is on duty and can cover. White = non-working hours: never assigned automatically
+ * (see isOvertime), only chosen by hand once a supervisor has approved the overtime.
  */
-export function busyBlocks(sa, me) {
-  return isPartner(sa, me) ? sa.shifts.filter((s) => s.type === 'class') : sa.shifts;
-}
+export const busyBlocks = (sa) => sa.shifts.filter((s) => s.type === 'class');
 
 /** Busy blocks of an SA on a day that touch [start,end). */
 export function conflictsFor(sa, me, day, start, end) {
-  return busyBlocks(sa, me).filter((s) => s.day === day && overlaps(s, { start, end }));
+  return busyBlocks(sa).filter((s) => s.day === day && overlaps(s, { start, end }));
 }
 
 /**
- * Candidates for one piece, free ones first.
- * free = no duty and no class during the piece. Others stay selectable but flagged.
+ * Candidates for one piece, best first.
+ *  free = no class (blue) during the piece.
+ *  ot   = not on duty (yellow) for the whole piece, so covering it is overtime (non-working hours).
+ * Order: available (not on leave/absent), no class, on duty before overtime, then least busy, partner, lightest load.
  */
 export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
   const list = [];
@@ -58,6 +57,7 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
       name: sa.name,
       partner: isPartner(sa, me),
       free: conflicts.length === 0,
+      ot: isOvertime(sa, piece),
       conflicts,
       busyMins,
       status: absent[`${dateKey}|${sa.name}`] || null, // 'leave' | 'absent' | null
@@ -68,6 +68,7 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
     (a, b) =>
       (a.status ? 1 : 0) - (b.status ? 1 : 0) ||
       (b.free ? 1 : 0) - (a.free ? 1 : 0) ||
+      (a.ot ? 1 : 0) - (b.ot ? 1 : 0) ||
       a.busyMins - b.busyMins ||
       (b.partner ? 1 : 0) - (a.partner ? 1 : 0) ||
       a.load - b.load ||
@@ -76,20 +77,18 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
   return list;
 }
 
-/**
- * Overtime: the reliever covers a time that is outside their own duty. A block partner who is
- * already on duty at the same post during the slot is not overtime.
- */
+/** Overtime = the student is not on duty (yellow) for the whole slot, so it is non-working time (white). */
 export const isOvertime = (sa, slot) =>
   !sa.shifts.some((s) => s.type === 'duty' && s.day === slot.day && s.start <= slot.start && s.end >= slot.end);
 
 /**
- * Best reliever for one slot, or null when nobody is free for the whole slot.
+ * Best reliever for one slot, or null when nobody on duty is available for the whole slot.
  *  - avoid: names to skip when someone else is free (rotation / "next person")
  *  - random: pick among equally good people so Regenerate can give another valid result
  */
 export function pickReliever({ model, me, slot, dateKey, absent, load, avoid = new Set(), random = false }) {
-  const free = rankCandidates({ model, me, piece: slot, dateKey, absent, load }).filter((c) => c.free && !c.status);
+  // only students who are on duty and have no class: overtime needs a supervisor's approval, so it is never automatic
+  const free = rankCandidates({ model, me, piece: slot, dateKey, absent, load }).filter((c) => c.free && !c.ot && !c.status);
   if (!free.length) return null;
   // the block partner is the natural cover and is never rotated away
   const fresh = free.filter((c) => c.partner || !avoid.has(c.name));

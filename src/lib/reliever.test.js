@@ -29,47 +29,54 @@ describe('buildSlots', () => {
 describe('generateSlots', () => {
   const labs = [lab('5501', 'MON', H(7), H(10))];
   const shifts = [duty('MON', H(7), H(10))];
+  const onDuty = (name, extra = [], team = '') => sa(name, [duty('MON', H(7), H(10)), ...extra], team);
   const run = (model, extra = {}) => generateSlots({ model, me, shifts, dates, absent: {}, labs, ...extra });
 
-  it('assigns only people who are free, one hour at a time', () => {
-    const model = { sas: [sa('ME', shifts), sa('A'), sa('B', [cls('MON', H(8), H(9))])] };
+  it('assigns only students who are on duty (yellow) and not in class (blue)', () => {
+    const model = { sas: [sa('ME', shifts), onDuty('A'), onDuty('B', [cls('MON', H(8), H(9))])] };
     const { pieces, assignments } = run(model);
     expect(pieces).toHaveLength(3);
     expect(assignments[pieceKey(pieces[1])]).toBe('A'); // B is in class 8-9
   });
 
-  it('rotates names between hours when several people are free', () => {
-    const model = { sas: [sa('ME', shifts), sa('A'), sa('B'), sa('C')] };
+  it('rotates names between hours when several people are available', () => {
+    const model = { sas: [sa('ME', shifts), onDuty('A'), onDuty('B'), onDuty('C')] };
     const { pieces, assignments } = run(model);
     const names = pieces.map((p) => assignments[pieceKey(p)]);
     expect(names[0]).not.toBe(names[1]);
     expect(names[1]).not.toBe(names[2]);
   });
 
-  it('leaves a slot unassigned when nobody is free', () => {
-    const model = { sas: [sa('ME', shifts), sa('B', [cls('MON', H(8), H(9))])] };
+  it('never assigns off-duty (white) students automatically, since that is overtime', () => {
+    const model = { sas: [sa('ME', shifts), sa('WHITE')] };
+    const { pieces, assignments } = run(model);
+    pieces.forEach((p) => expect(assignments[pieceKey(p)]).toBeNull());
+  });
+
+  it('leaves a slot unassigned when nobody on duty is available', () => {
+    const model = { sas: [sa('ME', shifts), onDuty('B', [cls('MON', H(8), H(9))])] };
     const { pieces, assignments } = run(model);
     expect(assignments[pieceKey(pieces[0])]).toBe('B');
     expect(assignments[pieceKey(pieces[1])]).toBeNull();
+    expect(assignments[pieceKey(pieces[2])]).toBe('B');
   });
 
   it('skips people marked absent on that date', () => {
-    const model = { sas: [sa('ME', shifts), sa('A'), sa('B')] };
+    const model = { sas: [sa('ME', shifts), onDuty('A'), onDuty('B')] };
     const { pieces, assignments } = run(model, { absent: { '2026-10-19|A': 'absent' } });
     pieces.forEach((p) => expect(assignments[pieceKey(p)]).toBe('B'));
   });
 
-  it('prefers the block partner, who is already on duty at the same post', () => {
-    const model = { sas: [sa('ME', [], 'T1'), sa('PARTNER', shifts, 'T1'), sa('OTHER')] };
+  it('prefers the block partner', () => {
+    const model = { sas: [sa('ME', [], 'T1'), onDuty('OTHER'), onDuty('PARTNER', [], 'T1')] };
     const res = generateSlots({ model, me: { name: 'ME', team: 'T1' }, shifts, dates, absent: {}, labs });
-    expect(res.pieces).toHaveLength(3);
     res.pieces.forEach((p) => expect(res.assignments[pieceKey(p)]).toBe('PARTNER'));
   });
 });
 
 describe('isOvertime', () => {
   const slot = { day: 'MON', start: H(9), end: H(10) };
-  it('is overtime when the reliever is off duty, not when already on duty', () => {
+  it('is overtime when the student is not on duty for the whole slot', () => {
     expect(isOvertime(sa('A'), slot)).toBe(true);
     expect(isOvertime(sa('A', [duty('MON', H(8), H(12))]), slot)).toBe(false);
     expect(isOvertime(sa('A', [duty('MON', H(8), H(9, 30))]), slot)).toBe(true);
@@ -78,14 +85,20 @@ describe('isOvertime', () => {
 
 describe('pickReliever / rankCandidates', () => {
   const slot = { day: 'MON', lab: 'A', start: H(9), end: H(10) };
-  it('lists free people first and flags busy ones with their conflicts', () => {
-    const model = { sas: [sa('ME'), sa('BUSY', [cls('MON', H(9), H(10))]), sa('FREE')] };
+  it('ranks on-duty students first, then off-duty (overtime), then students in class', () => {
+    const model = { sas: [
+      sa('ME'),
+      sa('CLASS', [duty('MON', H(7), H(10)), cls('MON', H(9), H(10))]),
+      sa('OFF'),
+      sa('DUTY', [duty('MON', H(9), H(10))]),
+    ] };
     const list = rankCandidates({ model, me, piece: slot, dateKey: '2026-10-19', absent: {}, load: {} });
-    expect(list.map((c) => c.name)).toEqual(['FREE', 'BUSY']);
-    expect(list[1].conflicts).toHaveLength(1);
+    expect(list.map((c) => c.name)).toEqual(['DUTY', 'OFF', 'CLASS']);
+    expect(list.map((c) => c.ot)).toEqual([false, true, false]);
+    expect(list[2].conflicts).toHaveLength(1);
   });
-  it('avoids a name when somebody else is free, and returns null when nobody is', () => {
-    const model = { sas: [sa('ME'), sa('A'), sa('B')] };
+  it('avoids a name when somebody else is available, and returns null when nobody on duty is', () => {
+    const model = { sas: [sa('ME'), sa('A', [duty('MON', H(9), H(10))]), sa('B', [duty('MON', H(9), H(10))])] };
     const args = { model, me, slot, dateKey: '2026-10-19', absent: {}, load: {} };
     expect(pickReliever({ ...args, avoid: new Set(['A']) })).toBe('B');
     expect(pickReliever({ ...args, absent: { '2026-10-19|A': 'leave', '2026-10-19|B': 'leave' } })).toBeNull();

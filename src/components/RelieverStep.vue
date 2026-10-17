@@ -9,7 +9,8 @@ import { state, setResult, ask, showToast } from '../store.js';
 const STATUS_LABEL = { leave: 'on leave', absent: 'absent' };
 const notes = ref({}); // pieceKey -> why this person was picked
 const open = ref(null); // pieceKey whose "next best" list is open
-const showBusy = ref({}); // pieceKey -> also list people who are not free
+const showBusy = ref({}); // pieceKey -> also list people who are in class or on leave
+const showOt = ref({}); // pieceKey -> also list people who are off duty (overtime, needs supervisor approval)
 const touched = ref(false); // the person changed something by hand
 
 const me = computed(() => state.me);
@@ -85,6 +86,16 @@ function markUnavailable(date, name, status) {
   setResult({ pieces: state.pieces, assignments: asg });
 }
 
+/** White cells are non-working hours: only with the supervisor's approval, so ask before assigning. */
+async function setOvertime(key, name) {
+  const ok = await ask({
+    title: `Assign ${niceName(name)} as overtime?`,
+    text: `${niceName(name)} is not on duty at this time (non-working hours). They cannot be forced to work unless the supervisor approves it. Continue only if the supervisor has approved.`,
+    okLabel: 'Supervisor approved',
+  });
+  if (ok) setPiece(key, name);
+}
+
 function setPiece(key, name) {
   touched.value = true;
   setResult({ pieces: state.pieces, assignments: { ...state.assignments, [key]: name } });
@@ -112,7 +123,8 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
         return {
           key, p, date, current, cur,
           ot: !!cur && isOvertime(state.model.sas.find((s) => s.name === current), p),
-          alternatives: cands.filter((c) => c.free && !c.status && c.name !== current).slice(0, 4),
+          alternatives: cands.filter((c) => c.free && !c.ot && !c.status && c.name !== current).slice(0, 4),
+          overtime: cands.filter((c) => c.free && c.ot && !c.status && c.name !== current),
           others: cands.filter((c) => c.name !== current && (!c.free || c.status)),
         };
       }),
@@ -127,14 +139,14 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
       <span class="badge-icon"><Icon name="swap" /></span>
       <div>
         <h2>Review reliever</h2>
-        <p class="muted">FreeVer picks the best free student assistant for each time. Press Leave or Absent and the replacement is chosen automatically.</p>
+        <p class="muted">FreeVer picks a student assistant who is on duty (yellow) and not in class (blue). Press Leave or Absent and the replacement is chosen automatically. Students off duty (white) are never assigned automatically.</p>
       </div>
     </div>
     <p v-if="!state.labs.length" class="notice err" role="alert">
       <Icon name="alert" :size="16" /> The laboratory schedule has not been saved yet, so there is nothing to cover. Ask the admin to import it.
     </p>
     <p v-else class="notice">
-      <Icon name="clock" :size="16" /> One list per laboratory room, one hour per line, only while that room is open. <b>OT</b> = the reliever is outside their own duty hours.
+      <Icon name="clock" :size="16" /> One list per laboratory room, one hour per line, only while that room is open. <b>OT</b> = non-working hours (white): only with the supervisor's approval.
     </p>
 
     <div v-for="d in days" :key="d.day" class="daybox">
@@ -158,8 +170,9 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
           <div class="who2">
             <b>{{ niceName(r.cur.name) }}</b>
             <div class="chipline">
-              <span v-if="r.cur.free" class="pill ok">Free the whole time</span>
-              <span v-else class="pill bad">Not free</span>
+              <span v-if="r.cur.free && !r.ot" class="pill ok">On duty, no class</span>
+              <span v-else-if="r.cur.free" class="pill bad">Off duty: needs supervisor approval</span>
+              <span v-else class="pill bad">In class</span>
               <span v-if="r.cur.partner" class="pill">Block partner</span>
               <span v-if="r.ot" class="pill bad" title="Covering outside their own duty hours">OT</span>
               <span v-if="r.cur.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</span>
@@ -168,7 +181,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
         </div>
         <div v-else class="person none">
           <span class="avatar">?</span>
-          <div class="who2"><b>No reliever</b><div class="chipline"><span class="pill bad">Nobody is free</span></div></div>
+          <div class="who2"><b>No reliever</b><div class="chipline"><span class="pill bad">Nobody on duty is available</span></div></div>
         </div>
 
         <div class="rowtools">
@@ -177,7 +190,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
             <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'leave')">Leave</button>
             <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'absent')">Absent</button>
           </div>
-          <button :disabled="!r.alternatives.length && !r.others.length && !r.current" :aria-expanded="open === r.key" @click="open = open === r.key ? null : r.key">
+          <button :disabled="!r.alternatives.length && !r.overtime.length && !r.others.length && !r.current" :aria-expanded="open === r.key" @click="open = open === r.key ? null : r.key">
             <Icon name="refresh" :size="14" /> Change
           </button>
         </div>
@@ -185,23 +198,33 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
         <div v-if="notes[r.key]" class="note small"><Icon name="sparkles" :size="14" /> {{ notes[r.key] }}</div>
 
         <div v-if="open === r.key" class="alts">
-          <div class="muted small">Next best matches (free for this whole time):</div>
+          <div class="muted small">Next best matches (on duty, no class):</div>
           <button v-for="a in r.alternatives" :key="a.name" class="alt" @click="setPiece(r.key, a.name)">
             <span class="avatar sm">{{ initialsOf(a.name) }}</span>
             <b>{{ niceName(a.name) }}</b>
             <span v-if="a.partner" class="pill">Block partner</span>
             <span class="muted small">{{ Math.round((a.load || 0) / 60) }}h assigned</span>
           </button>
-          <span v-if="!r.alternatives.length" class="muted small">Nobody else is free for this whole time.</span>
+          <span v-if="!r.alternatives.length" class="muted small">Nobody else on duty is available for this whole time.</span>
+          <button v-if="r.overtime.length" class="link small" :aria-expanded="!!showOt[r.key]" @click="showOt = { ...showOt, [r.key]: !showOt[r.key] }">
+            {{ showOt[r.key] ? 'Hide' : 'Show' }} off-duty students, overtime with supervisor approval ({{ r.overtime.length }})
+          </button>
+          <template v-if="showOt[r.key]">
+            <button v-for="a in r.overtime" :key="'t' + a.name" class="alt" @click="setOvertime(r.key, a.name)">
+              <span class="avatar sm">{{ initialsOf(a.name) }}</span>
+              <b>{{ niceName(a.name) }}</b>
+              <span class="pill bad">OT: non-working hours</span>
+            </button>
+          </template>
           <button v-if="r.others.length" class="link small" :aria-expanded="!!showBusy[r.key]" @click="showBusy = { ...showBusy, [r.key]: !showBusy[r.key] }">
-            {{ showBusy[r.key] ? 'Hide' : 'Show' }} people who are busy or unavailable ({{ r.others.length }})
+            {{ showBusy[r.key] ? 'Hide' : 'Show' }} people in class or unavailable ({{ r.others.length }})
           </button>
           <template v-if="showBusy[r.key]">
-            <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="setPiece(r.key, a.name)">
+            <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="a.ot ? setOvertime(r.key, a.name) : setPiece(r.key, a.name)">
               <span class="avatar sm">{{ initialsOf(a.name) }}</span>
               <b>{{ niceName(a.name) }}</b>
               <span v-if="a.status" class="pill bad">{{ STATUS_LABEL[a.status] }}</span>
-              <span v-else class="pill bad">Busy: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
+              <span v-else class="pill bad">In class: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
             </button>
           </template>
           <button v-if="r.current" class="link small" @click="setPiece(r.key, null)">Remove reliever</button>
@@ -209,7 +232,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
 
         <div v-if="r.cur && !r.cur.free" class="warn small row gap">
           <Icon name="alert" :size="14" />
-          {{ niceName(r.cur.name) }} is busy: {{ r.cur.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}
+          {{ niceName(r.cur.name) }} is in class: {{ r.cur.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}
         </div>
         <button v-if="r.cur && hasTeam(r.cur.name)" class="link small" @click="swapBlock(r.cur.name)">
           Columns look swapped? Swap this person with their block partner

@@ -7,7 +7,7 @@ const BASE = import.meta.env.BASE_URL;
 
 const FEATURES = [
   { icon: 'upload', title: 'Import the schedule', text: 'The admin drops the S.A Excel file once. FreeVer reads the ITO Department sheet and keeps it for everyone.' },
-  { icon: 'clock', title: 'Knows who is free', text: 'Yellow is duty, blue is class, white is free. Only students with no duty and no class are suggested.' },
+  { icon: 'clock', title: 'Knows who is free', text: 'Yellow is duty, blue is class, white is non-working time. Only students on duty and out of class are suggested; white is never forced to work without the supervisor's approval.' },
   { icon: 'swap', title: 'Replaces automatically', text: 'Mark a reliever on leave or absent and the best free student assistant is picked for you.' },
   { icon: 'message', title: 'Messenger-ready', text: 'Get a clean, professional message with the dates, times and relievers. One click to copy.' },
 ];
