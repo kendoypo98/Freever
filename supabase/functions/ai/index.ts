@@ -4,8 +4,23 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Both read pictures and check text. Override with the GEMINI_MODEL secret if Google renames or retires the model.
-const MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+// Pin a model with the GEMINI_MODEL secret. Otherwise this default is tried first and, if Google no longer offers it,
+// the newest available "flash" model is looked up automatically.
+const PINNED = Deno.env.get('GEMINI_MODEL');
+let model = PINNED ?? 'gemini-2.5-flash';
+
+/** Newest gemini-*-flash model this key may use for generateContent (e.g. gemini-3-flash), or null. */
+async function findFlashModel(key: string): Promise<string | null> {
+  const res = await fetch(`${GEMINI_URL}?pageSize=200`, { headers: { 'x-goog-api-key': key } });
+  if (!res.ok) return null;
+  const { models = [] } = await res.json();
+  const names: string[] = models
+    .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+    .filter((n: string) => /^gemini-[\d.]+-flash$/.test(n));
+  names.sort((a, b) => parseFloat(b.split('-')[1]) - parseFloat(a.split('-')[1]));
+  return names[0] ?? null;
+}
 const MAX_IMAGE_CHARS = 6_000_000; // base64 of roughly 4.5 MB
 const MAX_TEXT_CHARS = 20_000;
 const LIMIT_PER_MIN = 12;
@@ -73,18 +88,24 @@ async function callGemini(key: string, parts: Part[]) {
     generationConfig: { temperature: 0, responseMimeType: 'application/json' },
   });
   let res!: Response;
+  let searched = false;
   for (let attempt = 0; attempt < 4; attempt++) {
-    res = await fetch(`${GEMINI_URL}/${MODEL}:generateContent`, {
+    res = await fetch(`${GEMINI_URL}/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body,
     });
+    if (res.status === 404 && !PINNED && !searched) {
+      searched = true;
+      const found = await findFlashModel(key);
+      if (found && found !== model) { model = found; attempt--; continue; }
+    }
     if (res.ok || ![429, 500, 502, 503, 504].includes(res.status) || attempt === 3) break;
     await new Promise((r) => setTimeout(r, 1500 * 2 ** attempt));
   }
   if (!res.ok) {
     const busy = [429, 500, 502, 503, 504].includes(res.status);
-    throw new Error(busy ? 'The AI is busy right now. Please try again in a minute.' : `AI error (${res.status}). Check the Gemini key and the model name (${MODEL}).`);
+    throw new Error(busy ? 'The AI is busy right now. Please try again in a minute.' : `AI error (${res.status}). Check the Gemini key and the model name (${model}).`);
   }
   const data = await res.json();
   const text = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('');
