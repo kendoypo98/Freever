@@ -42,7 +42,7 @@ export function applyTheme(prefs) {
   const pal = dark ? preset.dark : preset.light;
   const accent = prefs.useCustomAccent ? prefs.accent : preset.accent;
   root.dataset.theme = dark ? 'dark' : 'light';
-  root.dataset.style = preset.style || '';
+  root.dataset.style = preset.style || (prefs.scene === 'pixel' ? 'pixel' : ''); // the Game Pixel scene brings the 8-bit shapes too
   root.dataset.fun = prefs.fun === false ? '' : '1';
   root.dataset.scene = prefs.scene || '';
   root.style.setProperty('--accent', accent);

@@ -556,3 +556,33 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-style='pixel'] .app .shiftrow { border: 3px solid var(--rar); border-radius: 0; box-shadow: 4px 4px 0 var(--rar); }
 :root[data-style='pixel'] .app .shiftrow .time, :root[data-style='pixel'] .app .shiftrow .avatar, :root[data-style='pixel'] .app .labhead, :root[data-style='pixel'] .app .daybox > .row h3 { border-radius: 0; }
 :root[data-style='pixel'] .app .card { border-top: 8px solid var(--accent); }
+
+
+/* ================= cards follow the chosen theme (Settings > Animated background) ================= */
+/* each scene supplies: --sc (accent), --sc-duty / --sc-ot (card colours), and the quest / room / corner icons */
+:root[data-scene='halloween'] { --sc: #c2410c; --sc-duty: #c2410c; --sc-ot: #7e22ce; --sc-day: '🎃'; --sc-room: '🦇'; --sc-deco: '🕸️'; }
+:root[data-scene='valentine'] { --sc: #be185d; --sc-duty: #be185d; --sc-ot: #9f1239; --sc-day: '💌'; --sc-room: '💕'; --sc-deco: '💖'; }
+:root[data-scene='christmas'] { --sc: #15803d; --sc-duty: #15803d; --sc-ot: #b91c1c; --sc-day: '🎁'; --sc-room: '🎄'; --sc-deco: '❄️'; }
+:root[data-scene='pixel'] { --sc: #0e7490; --sc-duty: #15803d; --sc-ot: #be185d; --sc-day: '🕹️'; --sc-room: '👾'; --sc-deco: '⭐'; }
+:root[data-theme='dark'][data-scene='halloween'] { --sc: #fb923c; --sc-duty: #fb923c; --sc-ot: #c084fc; }
+:root[data-theme='dark'][data-scene='valentine'] { --sc: #f472b6; --sc-duty: #f472b6; --sc-ot: #fb7185; }
+:root[data-theme='dark'][data-scene='christmas'] { --sc: #4ade80; --sc-duty: #4ade80; --sc-ot: #f87171; }
+:root[data-theme='dark'][data-scene='pixel'] { --sc: #22d3ee; --sc-duty: #4ade80; --sc-ot: #f472b6; }
+
+:root[data-fun='1'] .app .card { border-top-color: var(--sc, var(--accent)); box-shadow: 0 5px 0 var(--border), 0 0 34px -12px color-mix(in srgb, var(--sc, var(--accent)) 50%, transparent); }
+:root[data-fun='1'] .app .daybox { background: color-mix(in srgb, var(--sc, var(--accent)) 5%, var(--surface)); }
+:root[data-fun='1'] .app .daybox > .row h3 { color: var(--sc, var(--accent)); border-color: var(--sc, var(--accent)); background: color-mix(in srgb, var(--sc, var(--accent)) 12%, var(--surface)); }
+:root[data-fun='1'] .app .daybox > .row h3::before { content: var(--sc-day, '📜'); }
+:root[data-fun='1'] .app .labhead { color: var(--sc, var(--accent)); border-color: color-mix(in srgb, var(--sc, var(--accent)) 60%, var(--border)); background: color-mix(in srgb, var(--sc, var(--accent)) 10%, var(--surface)); }
+:root[data-fun='1'] .app .labhead::before { content: var(--sc-room, '🧪'); }
+:root[data-fun='1'] .app .shiftrow { --rar: var(--sc-duty, var(--ok)); }
+:root[data-fun='1'] .app .shiftrow[data-rarity='ot'] { --rar: var(--sc-ot, #7e22ce); }
+:root[data-theme='dark'][data-fun='1'] .app .shiftrow[data-rarity='ot'] { --rar: var(--sc-ot, #c084fc); }
+:root[data-fun='1'] .app .shiftrow[data-rarity='none'] { --rar: var(--muted); }
+:root[data-fun='1'] .app .shiftrow::after { content: var(--sc-deco, none); position: absolute; top: -13px; right: 12px; font-size: 1.15rem; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25)); }
+:root[data-fun='1'] .app .shiftrow[data-rarity='none']::after { content: none; }
+:root[data-fun='1'] .app .daycard.on { border-color: var(--sc, var(--accent)); box-shadow: 0 3px 0 color-mix(in srgb, var(--sc, var(--accent)) 60%, #000), 0 0 0 2px var(--sc, var(--accent)); }
+:root[data-fun='1'] .app .daycard.on::after { background: var(--sc, var(--accent)); }
+.quest-fill { background: linear-gradient(90deg, var(--sc, var(--accent)), color-mix(in srgb, var(--sc, var(--accent)) 55%, #fde047)); }
+:root[data-style='pixel'] .quest-fill { background: repeating-linear-gradient(90deg, var(--sc, var(--accent)) 0 10px, transparent 10px 12px); }
+:root[data-style='pixel'] .app .card { border-top-color: var(--sc, var(--accent)); }
