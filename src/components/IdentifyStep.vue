@@ -11,8 +11,9 @@ const selected = computed(() => (state.me ? state.model.sas.find((s) => s.name =
 const account = computed(() => state.model.sas.find((s) => s.name === state.profile.name) || null);
 // Names of other student assistants are confidential: only a single unambiguous match is ever revealed.
 const admin = computed(() => isAdmin());
-// Only an admin may act as someone else; everyone else is tied to their own account name.
-const match = computed(() => (admin.value && !selected.value && !account.value ? findUniqueName(query.value, state.model.sas) : null));
+// Anyone whose account name is not in the schedule can type their name as the schedule spells it.
+// Only a single, unambiguous match is shown, so nobody can browse other students' names.
+const match = computed(() => (!selected.value && !account.value ? findUniqueName(query.value, state.model.sas) : null));
 const duty = computed(() => (selected.value ? selected.value.shifts.filter((s) => s.type === 'duty') : []));
 const workDays = computed(() => DAYS.filter((d) => duty.value.some((s) => s.day === d)));
 const classOn = (d) => selected.value.shifts.filter((s) => s.day === d && s.type === 'class');
@@ -46,16 +47,12 @@ function toggle(d) {
         <h2>{{ selected ? `Hi ${niceName(selected.name)}!` : 'Who are you?' }}</h2>
         <p class="muted">
           {{ selected ? 'Which days do you need a reliever?'
-            : admin ? 'Your account is not in the current schedule. Type your name as it appears in the schedule.'
-              : 'Your S.A name is not in the current schedule.' }}
+            : 'Your account name is not in the schedule. Type your name as it appears in the schedule (first and last name).' }}
         </p>
       </div>
     </div>
 
-    <p v-if="!selected && !account && !admin" class="notice err" role="alert">
-      <Icon name="alert" :size="16" /> "{{ niceName(state.profile.name) }}" is not in the saved schedule, so there are no duty hours to cover yet. If your name is spelled differently there, ask the admin to reset your account with the spelling from the schedule. Otherwise ask them to upload the latest schedule, then reload this page.
-    </p>
-    <template v-if="!selected && !account && admin">
+    <template v-if="!selected && !account">
       <input v-model="query" type="text" class="search" placeholder="Your name (first and last name)" autocomplete="off"
         aria-label="Your full name as written in the schedule" @keydown.enter="match && pick(match)" />
       <div v-if="match" class="chips">
