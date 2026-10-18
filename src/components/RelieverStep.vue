@@ -102,6 +102,8 @@ function setPiece(key, name) {
   open.value = null;
 }
 
+const hours = (p) => Math.round(((p.end - p.start) / 60) * 10) / 10;
+const hourLabel = (m) => { const h = Math.floor(m / 60) % 24; return use24.value ? String(h).padStart(2, '0') : `${h % 12 || 12}${h >= 12 ? 'p' : 'a'}`; };
 const hasTeam = (name) => !!state.model.sas.find((s) => s.name === name)?.team;
 const missing = computed(() => state.pieces.filter((p) => !state.assignments[pieceKey(p)]).length);
 const closedDays = computed(() => state.days.filter((d) => !state.pieces.some((p) => p.day === d)));
@@ -162,82 +164,87 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
 
       <template v-for="L in d.labs" :key="L.lab">
       <h4 class="labhead">Room {{ L.lab }}</h4>
-      <div v-for="r in L.rows" :key="r.key" class="shiftrow" :data-rarity="!r.cur ? 'none' : r.ot ? 'ot' : 'duty'">
-        <div class="time"><Icon name="clock" :size="15" /> {{ fmtRange(r.p.start, r.p.end, use24) }}</div>
+      <div class="rgrid">
+      <article v-for="(r, idx) in L.rows" :key="r.key" class="rcard" :data-rarity="!r.cur ? 'none' : r.ot ? 'ot' : 'duty'" :style="{ animationDelay: idx * 60 + 'ms' }">
+        <header class="rc-title">
+          <span class="rc-gem left" :title="`Slot ${idx + 1}`">{{ idx + 1 }}</span>
+          <h5 class="rc-name">{{ r.cur ? niceName(r.cur.name) : 'No reliever' }}</h5>
+          <span class="rc-gem right" :title="`${r.alternatives.length} backup(s) on duty`">{{ r.alternatives.length }}</span>
+        </header>
 
-        <div v-if="r.cur" class="person">
-          <span class="avatar">{{ initialsOf(r.cur.name) }}</span>
-          <div class="who2">
-            <b>{{ niceName(r.cur.name) }}</b>
-            <div class="chipline">
-              <span v-if="r.cur.free && !r.ot" class="pill ok">On duty, no class</span>
-              <span v-else-if="r.cur.free" class="pill bad">Off duty: needs supervisor approval</span>
-              <span v-else class="pill bad">In class</span>
-              <span v-if="r.cur.partner" class="pill">Block partner</span>
-              <span class="pill" title="Hours this person covers on this list">{{ Math.round(((r.cur.load || 0) / 60) * 10) / 10 }}h assigned</span>
-              <span v-if="r.ot" class="pill bad" title="Covering outside their own duty hours">OT</span>
-              <span v-if="r.cur.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</span>
+        <div class="rc-art">
+          <span class="rc-ribbon" :title="`Starts at ${fmtRange(r.p.start, r.p.end, use24).split(' – ')[0]}`">{{ hourLabel(r.p.start) }}</span>
+          <div class="rc-emblem"><span class="avatar">{{ r.cur ? initialsOf(r.cur.name) : '?' }}</span></div>
+        </div>
+
+        <div class="rc-band">
+          <span class="rc-type">{{ !r.cur ? 'Empty' : !r.cur.free ? 'In class' : r.ot ? 'Overtime' : r.cur.partner ? 'Partner' : 'On duty' }}</span>
+          <span class="rc-hex" :title="`${hours(r.p)} hour(s) to cover`"><b>{{ hours(r.p) }}</b></span>
+          <span class="rc-stat" :title="r.cur ? 'Hours this person covers on this list' : ''">
+            <Icon name="clock" :size="14" /> {{ r.cur ? Math.round(((r.cur.load || 0) / 60) * 10) / 10 : 0 }}h
+          </span>
+        </div>
+
+        <div class="rc-text">
+          <div class="rc-time"><Icon name="clock" :size="14" /> {{ fmtRange(r.p.start, r.p.end, use24) }} &middot; Room {{ r.p.lab }}</div>
+          <p v-if="!r.cur" class="muted small">Nobody on duty is available. Use Change to pick someone.</p>
+          <p v-else-if="r.cur.free && !r.ot" class="muted small">On duty and out of class.<template v-if="r.cur.partner"> Block partner.</template></p>
+          <p v-else-if="r.cur.free" class="warn small">Off duty (white): needs the supervisor's approval.</p>
+          <p v-else class="warn small">
+            In class: {{ r.cur.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}
+          </p>
+          <p v-if="r.cur?.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</p>
+          <div v-if="notes[r.key]" class="note small"><Icon name="sparkles" :size="14" /> {{ notes[r.key] }}</div>
+
+          <div class="rowtools">
+            <div v-if="r.cur && r.date" class="seggroup">
+              <span class="seg on available" aria-label="Currently available">Available</span>
+              <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'leave')">Leave</button>
+              <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'absent')">Absent</button>
             </div>
+            <button :disabled="!r.alternatives.length && !r.overtime.length && !r.others.length && !r.current" :aria-expanded="open === r.key" @click="open = open === r.key ? null : r.key">
+              <Icon name="refresh" :size="14" /> Change
+            </button>
           </div>
-        </div>
-        <div v-else class="person none">
-          <span class="avatar">?</span>
-          <div class="who2"><b>No reliever</b><div class="chipline"><span class="pill bad">Nobody on duty is available</span></div></div>
-        </div>
 
-        <div class="rowtools">
-          <div v-if="r.cur && r.date" class="seggroup">
-            <span class="seg on available" aria-label="Currently available">Available</span>
-            <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'leave')">Leave</button>
-            <button class="seg" type="button" aria-pressed="false" @click="markUnavailable(r.date, r.cur.name, 'absent')">Absent</button>
-          </div>
-          <button :disabled="!r.alternatives.length && !r.overtime.length && !r.others.length && !r.current" :aria-expanded="open === r.key" @click="open = open === r.key ? null : r.key">
-            <Icon name="refresh" :size="14" /> Change
-          </button>
-        </div>
-
-        <div v-if="notes[r.key]" class="note small"><Icon name="sparkles" :size="14" /> {{ notes[r.key] }}</div>
-
-        <div v-if="open === r.key" class="alts">
-          <div class="muted small">Next best matches (on duty, no class):</div>
-          <button v-for="a in r.alternatives" :key="a.name" class="alt" @click="setPiece(r.key, a.name)">
-            <span class="avatar sm">{{ initialsOf(a.name) }}</span>
-            <b>{{ niceName(a.name) }}</b>
-            <span v-if="a.partner" class="pill">Block partner</span>
-            <span class="muted small">{{ Math.round((a.load || 0) / 60) }}h assigned</span>
-          </button>
-          <span v-if="!r.alternatives.length" class="muted small">Nobody else on duty is available for this whole time.</span>
-          <button v-if="r.overtime.length" class="link small" :aria-expanded="!!showOt[r.key]" @click="showOt = { ...showOt, [r.key]: !showOt[r.key] }">
-            {{ showOt[r.key] ? 'Hide' : 'Show' }} off-duty students, overtime with supervisor approval ({{ r.overtime.length }})
-          </button>
-          <template v-if="showOt[r.key]">
-            <button v-for="a in r.overtime" :key="'t' + a.name" class="alt" @click="setOvertime(r.key, a.name)">
+          <div v-if="open === r.key" class="alts">
+            <div class="muted small">Next best matches (on duty, no class):</div>
+            <button v-for="a in r.alternatives" :key="a.name" class="alt" @click="setPiece(r.key, a.name)">
               <span class="avatar sm">{{ initialsOf(a.name) }}</span>
               <b>{{ niceName(a.name) }}</b>
-              <span class="pill bad">OT: non-working hours</span>
+              <span v-if="a.partner" class="pill">Block partner</span>
+              <span class="muted small">{{ Math.round((a.load || 0) / 60) }}h assigned</span>
             </button>
-          </template>
-          <button v-if="r.others.length" class="link small" :aria-expanded="!!showBusy[r.key]" @click="showBusy = { ...showBusy, [r.key]: !showBusy[r.key] }">
-            {{ showBusy[r.key] ? 'Hide' : 'Show' }} people in class or unavailable ({{ r.others.length }})
-          </button>
-          <template v-if="showBusy[r.key]">
-            <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="a.ot ? setOvertime(r.key, a.name) : setPiece(r.key, a.name)">
-              <span class="avatar sm">{{ initialsOf(a.name) }}</span>
-              <b>{{ niceName(a.name) }}</b>
-              <span v-if="a.status" class="pill bad">{{ STATUS_LABEL[a.status] }}</span>
-              <span v-else class="pill bad">In class: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
+            <span v-if="!r.alternatives.length" class="muted small">Nobody else on duty is available for this whole time.</span>
+            <button v-if="r.overtime.length" class="link small" :aria-expanded="!!showOt[r.key]" @click="showOt = { ...showOt, [r.key]: !showOt[r.key] }">
+              {{ showOt[r.key] ? 'Hide' : 'Show' }} off-duty students, overtime with supervisor approval ({{ r.overtime.length }})
             </button>
-          </template>
-          <button v-if="r.current" class="link small" @click="setPiece(r.key, null)">Remove reliever</button>
-        </div>
+            <template v-if="showOt[r.key]">
+              <button v-for="a in r.overtime" :key="'t' + a.name" class="alt" @click="setOvertime(r.key, a.name)">
+                <span class="avatar sm">{{ initialsOf(a.name) }}</span>
+                <b>{{ niceName(a.name) }}</b>
+                <span class="pill bad">OT: non-working hours</span>
+              </button>
+            </template>
+            <button v-if="r.others.length" class="link small" :aria-expanded="!!showBusy[r.key]" @click="showBusy = { ...showBusy, [r.key]: !showBusy[r.key] }">
+              {{ showBusy[r.key] ? 'Hide' : 'Show' }} people in class or unavailable ({{ r.others.length }})
+            </button>
+            <template v-if="showBusy[r.key]">
+              <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="a.ot ? setOvertime(r.key, a.name) : setPiece(r.key, a.name)">
+                <span class="avatar sm">{{ initialsOf(a.name) }}</span>
+                <b>{{ niceName(a.name) }}</b>
+                <span v-if="a.status" class="pill bad">{{ STATUS_LABEL[a.status] }}</span>
+                <span v-else class="pill bad">In class: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
+              </button>
+            </template>
+            <button v-if="r.current" class="link small" @click="setPiece(r.key, null)">Remove reliever</button>
+          </div>
 
-        <div v-if="r.cur && !r.cur.free" class="warn small row gap">
-          <Icon name="alert" :size="14" />
-          {{ niceName(r.cur.name) }} is in class: {{ r.cur.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}
+          <button v-if="r.cur && hasTeam(r.cur.name)" class="link small" @click="swapBlock(r.cur.name)">
+            Columns look swapped? Swap this person with their block partner
+          </button>
         </div>
-        <button v-if="r.cur && hasTeam(r.cur.name)" class="link small" @click="swapBlock(r.cur.name)">
-          Columns look swapped? Swap this person with their block partner
-        </button>
+      </article>
       </div>
       </template>
     </div>
