@@ -91,7 +91,7 @@ function frame(now) {
 
 function size() {
   if (!canvas.value) return;
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  dpr = Math.min(window.innerWidth < 640 ? 1.5 : 2, window.devicePixelRatio || 1); // lighter on phones
   w = window.innerWidth; h = window.innerHeight;
   canvas.value.width = w * dpr; canvas.value.height = h * dpr;
   ctx = canvas.value.getContext('2d');
@@ -104,7 +104,8 @@ async function start() {
   const cfg = CONFIG[scene.value];
   if (!cfg || !canvas.value) return;
   size();
-  parts = Array.from({ length: cfg.n }, () => spawn(cfg, true));
+  const count = Math.round(cfg.n * (window.innerWidth < 640 ? 0.55 : 1)); // fewer pieces on phones: smoother, easier on the battery
+  parts = Array.from({ length: count }, () => spawn(cfg, true));
   if (reduced()) { draw(cfg, 0); return; } // one still picture
   last = performance.now();
   raf = requestAnimationFrame(frame);

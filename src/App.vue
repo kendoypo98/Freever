@@ -77,30 +77,30 @@ async function clearSettings() {
   <Landing v-else-if="!state.profile && state.view === 'landing'" />
   <LoginPage v-else-if="!state.profile" :key="state.view" />
 
-  <div v-else class="app mx-auto max-w-[1000px] pb-10 sm:px-5">
-    <header class="sticky top-0 z-10 -mx-[14px] mb-4 sm:-mx-5 sm:mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[var(--border)] bg-[var(--surface)] px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5">
+  <div v-else class="app mx-auto max-w-[1000px] sm:px-5">
+    <header class="sticky top-0 z-10 -mx-[14px] mb-4 sm:-mx-5 sm:mb-6 flex items-center gap-x-5 border-b border-[var(--border)] bg-[var(--surface)] px-4 pb-2.5 pt-[max(0.6rem,env(safe-area-inset-top))] sm:px-5">
       <div class="flex items-center gap-2.5">
         <img :src="logoSrc" alt="" width="34" height="34" />
         <span class="wordmark">Free<span>Ver</span></span>
       </div>
 
-      <nav class="order-last flex w-full items-center justify-center gap-1 sm:order-none sm:w-auto sm:flex-1" aria-label="Steps">
+      <nav class="stepnav" aria-label="Steps">
         <template v-for="(s, idx) in steps" :key="s.label">
-          <span v-if="idx" class="hidden h-px w-6 bg-[var(--border)] sm:block" />
+          <span v-if="idx" class="stepsep" aria-hidden="true" />
           <button
-            class="!rounded-full !border-0 !px-3 !py-1.5 !shadow-none"
-            :class="s.i === current ? '!bg-[var(--accent)] !text-white' : 'text-[var(--muted)]'"
+            type="button" class="stepbtn"
+            :class="{ on: s.i === current, done: idx < curIdx }"
             :disabled="s.i > maxStep"
             :aria-current="s.i === current ? 'step' : undefined"
             :aria-label="`Step ${idx + 1}: ${s.label}`"
             :title="s.i > maxStep ? 'Finish the previous step first' : s.label"
             @click="state.step = s.i"
           >
-            <span class="grid size-5 place-items-center rounded-full text-[11px] font-bold"
-              :class="s.i === current ? 'bg-white/25' : idx < curIdx ? 'bg-[var(--ok)] text-white' : 'bg-[var(--border)]'">
+            <Icon class="stepicon" :name="idx < curIdx ? 'check' : s.icon" :size="20" />
+            <span class="stepnum" :class="s.i === current ? 'bg-white/25' : idx < curIdx ? 'bg-[var(--ok)] text-white' : 'bg-[var(--border)]'">
               <Icon v-if="idx < curIdx" name="check" :size="12" /><template v-else>{{ idx + 1 }}</template>
             </span>
-            <span class="hidden sm:inline">{{ s.label }}</span>
+            <span class="steplabel">{{ s.label }}</span>
           </button>
         </template>
       </nav>
