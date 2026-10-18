@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import Icon from './Icon.vue';
 import { buildMessage } from '../lib/message.js';
 import { state, resetFlow } from '../store.js';
+import { burst } from '../lib/confetti.js';
 
 const generated = computed(() => buildMessage({
   me: state.me, pieces: state.pieces, assignments: state.assignments, dates: state.dates, tpl: state.prefs.tpl, use24: state.prefs.use24, model: state.model,
@@ -10,6 +11,7 @@ const generated = computed(() => buildMessage({
 const text = ref(generated.value);
 const copied = ref(false);
 const copyFailed = ref(false);
+const done = ref(false); // the message was copied at least once: quest complete
 const area = ref(null);
 watch(generated, (v) => { text.value = v; });
 
@@ -23,6 +25,7 @@ async function copy() {
     try { ok = document.execCommand('copy'); } catch { ok = false; }
   }
   copied.value = ok;
+  if (ok) { done.value = true; burst(); }
   copyFailed.value = !ok;
   setTimeout(() => { copied.value = false; copyFailed.value = false; }, 3000);
 }
@@ -38,6 +41,9 @@ async function copy() {
       </div>
     </div>
     <textarea ref="area" v-model="text" aria-label="Message to send" :rows="Math.min(24, text.split('\n').length + 2)" />
+    <p v-if="done" class="quest-complete" role="status">
+      <Icon name="sparkles" :size="18" /> Quest complete! Your reliever message is copied. Paste it into Messenger.
+    </p>
     <p v-if="copyFailed" class="notice err" role="alert">
       <Icon name="alert" :size="16" /> Couldn't copy automatically. The text is selected, so press Ctrl+C (or long-press and Copy).
     </p>

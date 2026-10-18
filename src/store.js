@@ -177,6 +177,7 @@ export function generate() {
   const duty = mine.shifts.filter((s) => s.type === 'duty' && state.days.includes(s.day));
   setResult(generateSlots({ model: state.model, me: state.me, shifts: duty, dates, absent: state.absent, labs: state.labs }));
   state.step = 2;
+  showToast('Reliever list ready!');
 }
 
 export function resetFlow() {

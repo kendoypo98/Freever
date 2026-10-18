@@ -247,5 +247,6 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
       <button class="primary" @click="state.step = 3">Create message <Icon name="right" :size="16" /></button>
     </div>
     <p v-if="missing > 0" class="muted small">{{ missing }} time slot(s) still have no reliever.</p>
+    <p v-else-if="state.pieces.length" class="pill ok" role="status"><Icon name="check" :size="12" /> All hours covered</p>
   </section>
 </template>

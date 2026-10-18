@@ -26,6 +26,8 @@ onMounted(init);
 const admin = computed(() => isAdmin());
 const steps = computed(() => STEPS.map((s, i) => ({ ...s, i })).filter((s) => admin.value || !s.adminOnly));
 const current = computed(() => state.step ?? (admin.value && !state.model ? 0 : 1));
+const curIdx = computed(() => Math.max(0, steps.value.findIndex((s) => s.i === current.value)));
+const questPct = computed(() => Math.round(((curIdx.value + 1) / steps.value.length) * 100));
 // Once the reliever step has been reached it stays reachable, even when no laboratory is open on the chosen days.
 const maxStep = computed(() => (!state.model ? 0 : !state.me || !state.days.length ? 1 : state.pieces.length || state.step >= 2 ? 3 : 1));
 const logoSrc = `${import.meta.env.BASE_URL}favicon.svg`;
@@ -87,7 +89,9 @@ async function clearSettings() {
             @click="state.step = s.i"
           >
             <span class="grid size-5 place-items-center rounded-full text-[11px] font-bold"
-              :class="s.i === current ? 'bg-white/25' : 'bg-[var(--border)]'">{{ idx + 1 }}</span>
+              :class="s.i === current ? 'bg-white/25' : idx < curIdx ? 'bg-[var(--ok)] text-white' : 'bg-[var(--border)]'">
+              <Icon v-if="idx < curIdx" name="check" :size="12" /><template v-else>{{ idx + 1 }}</template>
+            </span>
             <span class="hidden sm:inline">{{ s.label }}</span>
           </button>
         </template>
@@ -102,6 +106,9 @@ async function clearSettings() {
         </button>
         <button class="icon-btn" aria-label="Settings" title="Settings" @click="settingsOpen = true"><Icon name="sliders" /></button>
         <button class="icon-btn" aria-label="Log out" title="Log out" @click="logout"><Icon name="logout" /></button>
+      </div>
+      <div class="quest" role="progressbar" aria-label="Progress" :aria-valuenow="curIdx + 1" aria-valuemin="1" :aria-valuemax="steps.length">
+        <div class="quest-fill" :style="{ width: questPct + '%' }" />
       </div>
     </header>
 

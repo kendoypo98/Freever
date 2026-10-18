@@ -118,6 +118,7 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
 
     <label class="inline">Text size <input v-model.number="prefs.fontSize" type="range" min="13" max="20" /></label>
     <label class="check"><input v-model="prefs.use24" type="checkbox" /> <span>24-hour time</span></label>
+    <label class="check"><input v-model="prefs.fun" type="checkbox" /> <span>Game style (chunky buttons, progress bar, confetti)</span></label>
 
     <div class="actions">
       <button type="button" @click="resetSettings(); showToast('Appearance reset.')">Reset appearance only</button>

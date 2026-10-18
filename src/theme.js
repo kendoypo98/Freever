@@ -4,6 +4,7 @@ export const PRESETS = [
   { id: 'sunset', name: 'Sunset', accent: '#c2410c', light: { bg: '#fdf5ef', surface: '#ffffff' }, dark: { bg: '#18100b', surface: '#241913' } },
   { id: 'grape', name: 'Grape', accent: '#9333ea', light: { bg: '#f7f2fc', surface: '#ffffff' }, dark: { bg: '#130c1c', surface: '#1e1530' } },
   { id: 'rose', name: 'Rose', accent: '#e11d48', light: { bg: '#fdf2f4', surface: '#ffffff' }, dark: { bg: '#190b10', surface: '#26131a' } },
+  { id: 'pixel', name: 'Pixel Quest', accent: '#d62839', style: 'pixel', light: { bg: '#fdf3d0', surface: '#fffdf5' }, dark: { bg: '#1a1033', surface: '#271a4a' } },
   { id: 'slate', name: 'Slate', accent: '#475569', light: { bg: '#f3f4f6', surface: '#ffffff' }, dark: { bg: '#0f1115', surface: '#181b21' } },
 ];
 
@@ -16,6 +17,7 @@ export const DEFAULT_PREFS = {
   bgDim: 0.55,
   fontSize: 16,
   use24: false,
+  fun: true, // game style: chunky buttons, quest progress bar, confetti
   tpl: {},
 };
 
@@ -27,6 +29,8 @@ export function applyTheme(prefs) {
   const pal = dark ? preset.dark : preset.light;
   const accent = prefs.useCustomAccent ? prefs.accent : preset.accent;
   root.dataset.theme = dark ? 'dark' : 'light';
+  root.dataset.style = preset.style || '';
+  root.dataset.fun = prefs.fun === false ? '' : '1';
   root.style.setProperty('--accent', accent);
   root.style.setProperty('--bg', pal.bg);
   root.style.setProperty('--surface', pal.surface);
