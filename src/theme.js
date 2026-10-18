@@ -26,8 +26,9 @@ export const DEFAULT_PREFS = {
   bgDim: 0.55,
   fontSize: 16,
   use24: false,
-  scene: '', // animated background: '' | valentine | christmas | halloween | pixel
-  sfx: false, // sound effects
+  v: 2, // settings version: older saved settings get the new Halloween + sound defaults once
+  scene: 'halloween', // animated background: '' | valentine | christmas | halloween | pixel
+  sfx: true, // sound effects
   sfxVolume: 0.4,
   fun: true, // game style: chunky buttons, quest progress bar, confetti
   tpl: {},

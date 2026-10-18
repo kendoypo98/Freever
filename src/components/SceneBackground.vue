@@ -4,7 +4,7 @@ import { state } from '../store.js';
 
 // An animated seasonal / arcade background drawn on one canvas behind the whole app.
 // It stands still for people who prefer reduced motion and stops when the tab is hidden.
-const scene = computed(() => state.prefs.scene || '');
+const scene = computed(() => (state.profile ? state.prefs.scene || '' : ''));
 const canvas = ref(null);
 
 const PIXEL_COLORS = ['#22d3ee', '#f472b6', '#facc15', '#4ade80', '#a78bfa'];

@@ -108,7 +108,9 @@ export function enter(profile) {
   state.profile = profile;
   if (!profile) return;
   setUser(profile.id); // scope local prefs to this account
-  setPrefs(load('prefs', {}));
+  const saved = load('prefs', {});
+  if (saved.v !== 2) { delete saved.scene; delete saved.sfx; delete saved.sfxVolume; } // adopt the Halloween + sound defaults once
+  setPrefs(saved);
   state.model = null; state.labs = []; state.labSource = 'shared'; state.step = null;
   state.me = null; state.days = []; state.dates = {}; state.absent = {}; state.pieces = []; state.assignments = {};
   loadData();
@@ -140,7 +142,7 @@ export async function logout() {
 // theme: before login use the landing choice, afterwards the saved preferences
 watch(() => [state.profile, state.darkPre, state.prefs], () => {
   if (state.profile) { applyTheme(state.prefs); save('prefs', state.prefs); }
-  else applyTheme({ ...DEFAULT_PREFS, mode: state.darkPre ? 'dark' : 'light' });
+  else applyTheme({ ...DEFAULT_PREFS, scene: '', mode: state.darkPre ? 'dark' : 'light' }); // the landing and login pages stay plain
 }, { deep: true, immediate: true });
 
 // a newly loaded schedule may not contain the previously chosen person any more
