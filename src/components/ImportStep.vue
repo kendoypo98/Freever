@@ -22,6 +22,10 @@ const labBusy = ref('');
 const labMsg = ref({ error: '', warnings: [], saved: false });
 
 const model = computed(() => state.model);
+const dragging = ref(false);
+// the setup checklist: both parts must be saved before students can use the app
+const scheduleDone = computed(() => saved.value || !!state.uploadedAt);
+const labsDone = computed(() => labMsg.value.saved || labsLoaded.value);
 // Student names are confidential: warnings only ever show initials.
 const mask = (text) => (model.value ? model.value.sas.reduce((t, s) => t.split(s.name).join(initials(s.name)), text) : text);
 const issues = computed(() => (model.value ? validateModel(model.value).filter((i) => i.level === 'warn') : []));
@@ -157,14 +161,21 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
       </div>
     </div>
 
+    <ul class="questlog" aria-label="Setup checklist">
+      <li :class="{ done: scheduleDone }"><span class="qcheck" aria-hidden="true">✓</span> Quest 1: import the S.A schedule</li>
+      <li :class="{ done: labsDone }"><span class="qcheck" aria-hidden="true">✓</span> Quest 2: scan the laboratory schedule</li>
+      <li v-if="scheduleDone && labsDone" class="done ready"><span class="qcheck" aria-hidden="true">★</span> All set! Students can start</li>
+    </ul>
+
     <label class="check">
       <input v-model="firstIsRight" type="checkbox" :disabled="!buf && !!model" @change="changeColumns" />
       <span>The first name of each pair is the <b>right</b> column (the second name is the left)</span>
     </label>
 
-    <div class="drop" :class="{ busy }" role="button" tabindex="0" :aria-busy="!!busy"
+    <div class="drop" :class="{ busy, over: dragging }" role="button" tabindex="0" :aria-busy="!!busy"
       aria-label="Choose the schedule file: Excel, PNG or JPEG"
-      @dragover.prevent @drop.prevent="onDrop" @click="input?.click()"
+      @dragover.prevent @dragenter.prevent="dragging = true" @dragleave="dragging = false"
+      @drop.prevent="dragging = false; onDrop($event)" @click="input?.click()"
       @keydown.enter.prevent="input?.click()" @keydown.space.prevent="input?.click()">
       <Icon name="upload" :size="28" />
       <strong>Drop the Excel file here or click to browse</strong>

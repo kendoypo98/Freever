@@ -663,3 +663,47 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-fun='1'] .app .rcard:hover { transform: translateY(-3px) rotate(-.5deg); }
 
 @media (max-width: 560px) { .rgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; } }
+
+
+/* ================= import screens (admin import, student laboratory scan) ================= */
+.questlog { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0 0 14px; }
+.questlog li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; border: 2px solid var(--border); background: var(--surface); color: var(--muted); font-size: .85rem; font-weight: 700; }
+.qcheck { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--surface); font-size: .72rem; }
+.questlog li.done { color: var(--ok); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+.questlog li.done .qcheck { background: var(--ok); color: var(--on-rar); }
+.questlog li.ready { animation: freever-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+
+@keyframes freever-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+:root[data-fun='1'] .app .drop {
+  position: relative; overflow: hidden; padding: 2.4rem 1rem; border: 3px dashed var(--sc, var(--accent)); border-radius: 22px;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--sc, var(--accent)) 20%, var(--surface)), var(--surface) 70%);
+  box-shadow: 0 5px 0 var(--border), inset 0 0 34px -14px var(--sc, var(--accent)); color: var(--sc, var(--accent));
+  transition: transform .2s, box-shadow .2s;
+}
+:root[data-fun='1'] .app .drop .icon-svg { width: 44px; height: 44px; animation: freever-bob 2.2s ease-in-out infinite; filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--sc, var(--accent)) 40%, transparent)); }
+:root[data-fun='1'] .app .drop strong { font-size: 1.05rem; font-weight: 800; }
+:root[data-fun='1'] .app .drop:hover, :root[data-fun='1'] .app .drop.over { transform: scale(1.015); border-style: solid; box-shadow: 0 5px 0 var(--border), 0 0 30px -4px var(--sc, var(--accent)), inset 0 0 40px -10px var(--sc, var(--accent)); }
+:root[data-fun='1'] .app .drop.busy { animation: freever-pulse 1.2s ease-in-out infinite; }
+@keyframes freever-pulse { 50% { box-shadow: 0 5px 0 var(--border), 0 0 34px 0 var(--sc, var(--accent)); } }
+
+/* stat cards */
+:root[data-fun='1'] .app .stats div, :root[data-fun='1'] .app .daystats div { position: relative; border: 2px solid var(--border); border-radius: 14px; box-shadow: 0 3px 0 var(--border); }
+:root[data-fun='1'] .app .stats b { color: var(--sc, var(--accent)); font-weight: 800; }
+:root[data-fun='1'] .app .stats div::before { font-size: 1.25rem; line-height: 1; margin-bottom: 2px; }
+:root[data-fun='1'] .app .stats div:nth-child(1)::before { content: '👥'; }
+:root[data-fun='1'] .app .stats div:nth-child(2)::before { content: '⚔️'; }
+:root[data-fun='1'] .app .stats div:nth-child(3)::before { content: '📚'; }
+:root[data-fun='1'] .app .daystats b { color: var(--sc, var(--accent)); }
+
+/* section banners */
+:root[data-fun='1'] .app .labbox > h3, :root[data-fun='1'] .app .card > .row.between > h3 { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; font-weight: 800; color: var(--sc, var(--accent)); background: color-mix(in srgb, var(--sc, var(--accent)) 12%, var(--surface)); border: 2px solid var(--sc, var(--accent)); }
+:root[data-fun='1'] .app .labbox { border-top: 0; margin-top: 1.8rem; padding: 1.1rem; border: 2px solid var(--border); border-radius: 20px; background: color-mix(in srgb, var(--sc, var(--accent)) 4%, var(--surface)); box-shadow: 0 4px 0 var(--border); }
+
+/* each laboratory room = a small quest card */
+:root[data-fun='1'] .app .labrow { padding: 8px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 3px 0 var(--border); }
+:root[data-fun='1'] .app .labimg { border-width: 3px; border-radius: 14px; box-shadow: 0 4px 0 var(--border); }
+:root[data-fun='1'] .app .legend .tag { box-shadow: 0 2px 0 rgba(0, 0, 0, .18); }
+
+:root[data-style='pixel'] .app .drop { border-radius: 0; border-width: 4px; }
+:root[data-style='pixel'] .app :is(.stats div, .daystats div, .labrow, .labbox, .labimg, .questlog li, .qcheck) { border-radius: 0; }
+:root[data-style='pixel'] .app :is(.labbox > h3, .card > .row.between > h3) { border-radius: 0; }
