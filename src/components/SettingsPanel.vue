@@ -1,7 +1,8 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import Icon from './Icon.vue';
-import { PRESETS, imageToDataUrl } from '../theme.js';
+import { PRESETS, SCENES, imageToDataUrl } from '../theme.js';
+import { sfx } from '../lib/sfx.js';
 import { DEFAULT_TEMPLATE } from '../lib/message.js';
 import { changePassword, resetPasswordFor } from '../lib/auth.js';
 import { state, resetSettings, isAdmin, showToast } from '../store.js';
@@ -107,6 +108,21 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
     <label class="inline">Custom accent
       <input type="color" :value="prefs.accent" @input="pickAccent" />
     </label>
+
+    <label>Animated background</label>
+    <div class="scenes" role="group" aria-label="Animated background">
+      <button v-for="s in SCENES" :key="s.id || 'none'" type="button" class="scene-btn" :class="{ on: (prefs.scene || '') === s.id }"
+        :aria-pressed="(prefs.scene || '') === s.id" @click="prefs.scene = s.id">
+        <span aria-hidden="true">{{ s.icon }}</span> {{ s.name }}
+      </button>
+    </div>
+    <p v-if="prefs.scene" class="muted small">A chosen scene replaces the background image below.</p>
+
+    <label class="check"><input v-model="prefs.sfx" type="checkbox" /> <span>Sound effects (button blips, level-up and success sounds)</span></label>
+    <template v-if="prefs.sfx">
+      <label class="inline">Volume <input v-model.number="prefs.sfxVolume" type="range" min="0.05" max="1" step="0.05" aria-label="Sound effects volume" /></label>
+      <button type="button" @click="sfx.success()">Test sound</button>
+    </template>
 
     <label><Icon name="image" :size="14" /> Background image</label>
     <input type="file" accept="image/*" aria-label="Choose a background image" @change="onImage" />

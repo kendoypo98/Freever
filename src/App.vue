@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import Icon from './components/Icon.vue';
 import Landing from './components/Landing.vue';
 import LoginPage from './components/LoginPage.vue';
@@ -9,6 +9,8 @@ import RelieverStep from './components/RelieverStep.vue';
 import MessageStep from './components/MessageStep.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
+import SceneBackground from './components/SceneBackground.vue';
+import { sfx, setSfx } from './lib/sfx.js';
 import { state, init, isAdmin, logout, setPrefs, loadData, ask, showToast } from './store.js';
 import { getPrefix } from './lib/storage.js';
 import { niceName } from './lib/schedule.js';
@@ -21,6 +23,12 @@ const STEPS = [
 ];
 
 const settingsOpen = ref(false);
+
+// sound effects (Settings > Appearance): a soft blip when a button is pressed
+watch(() => [state.prefs.sfx, state.prefs.sfxVolume], () => setSfx(state.prefs.sfx, state.prefs.sfxVolume), { immediate: true });
+const clickSound = (e) => { if (e.target.closest?.('.app button, .drawer button, .confirm button')) sfx.click(); };
+onMounted(() => document.addEventListener('click', clickSound));
+onBeforeUnmount(() => document.removeEventListener('click', clickSound));
 onMounted(init);
 
 const admin = computed(() => isAdmin());
@@ -144,6 +152,7 @@ async function clearSettings() {
     </template>
   </div>
 
+  <SceneBackground />
   <ConfirmDialog />
   <div v-if="state.toast" class="toast" role="status" aria-live="polite">{{ state.toast }}</div>
 </template>

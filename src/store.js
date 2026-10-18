@@ -7,6 +7,7 @@ import { loadSchedule, loadLabs } from './lib/db.js';
 import { configured, supabase } from './lib/supabase.js';
 import { DAYS } from './lib/schedule.js';
 import { generateSlots } from './lib/reliever.js';
+import { sfx } from './lib/sfx.js';
 
 export const state = reactive({
   profile: undefined, // undefined = checking the session, null = logged out
@@ -178,6 +179,7 @@ export function generate() {
   setResult(generateSlots({ model: state.model, me: state.me, shifts: duty, dates, absent: state.absent, labs: state.labs }));
   state.step = 2;
   showToast('Reliever list ready!');
+  sfx.ready();
 }
 
 export function resetFlow() {

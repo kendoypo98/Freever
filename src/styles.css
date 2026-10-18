@@ -485,3 +485,33 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 
 .coverage { margin-top: 1rem; }
 .coverage .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; font-size: .8rem; }
+
+
+/* ---------- animated background scenes ---------- */
+.scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+:root:not([data-scene='']) body { background: transparent; }
+:root[data-scene='valentine'] .scene { background: linear-gradient(160deg, #ffd9e6, #ffb3cc 60%, #ff9ec0); }
+:root[data-scene='christmas'] .scene { background: linear-gradient(180deg, #d7ecdf, #f6dadd 85%, #ffffff); }
+:root[data-scene='halloween'] .scene { background: linear-gradient(180deg, #ffe3c2, #e8d5f7); }
+:root[data-scene='pixel'] .scene {
+  background-color: #cfe6ff;
+  background-image: linear-gradient(rgba(60, 80, 160, .16) 1px, transparent 1px), linear-gradient(90deg, rgba(60, 80, 160, .16) 1px, transparent 1px);
+  background-size: 32px 32px; animation: freever-grid 6s linear infinite;
+}
+:root[data-theme='dark'][data-scene='valentine'] .scene { background: linear-gradient(160deg, #2a0f1f, #4a1330 70%, #5b1740); }
+:root[data-theme='dark'][data-scene='christmas'] .scene { background: linear-gradient(180deg, #0b2a1a, #14301f 60%, #3a0d14); }
+:root[data-theme='dark'][data-scene='halloween'] .scene { background: linear-gradient(180deg, #1a0b2e, #2a1040 65%, #3a1a05); }
+:root[data-theme='dark'][data-scene='pixel'] .scene {
+  background-color: #0d0a24;
+  background-image: linear-gradient(rgba(120, 140, 255, .14) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 140, 255, .14) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+@keyframes freever-grid { to { background-position: 0 32px, 32px 0; } }
+@media (prefers-reduced-motion: reduce) { .scene { animation: none !important; } }
+/* text that sits straight on the scene stays readable */
+:root:not([data-scene='']) .app footer { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; width: fit-content; margin-inline: auto; }
+
+.scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: .4rem 0 .6rem; }
+.scene-btn { justify-content: flex-start; }
+.scene-btn.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }

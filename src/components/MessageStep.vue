@@ -4,6 +4,7 @@ import Icon from './Icon.vue';
 import { buildMessage } from '../lib/message.js';
 import { state, resetFlow } from '../store.js';
 import { burst } from '../lib/confetti.js';
+import { sfx } from '../lib/sfx.js';
 
 const generated = computed(() => buildMessage({
   me: state.me, pieces: state.pieces, assignments: state.assignments, dates: state.dates, tpl: state.prefs.tpl, use24: state.prefs.use24, model: state.model,
@@ -25,7 +26,7 @@ async function copy() {
     try { ok = document.execCommand('copy'); } catch { ok = false; }
   }
   copied.value = ok;
-  if (ok) { done.value = true; burst(); }
+  if (ok) { done.value = true; burst(); sfx.success(); } else sfx.error();
   copyFailed.value = !ok;
   setTimeout(() => { copied.value = false; copyFailed.value = false; }, 3000);
 }

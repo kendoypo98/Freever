@@ -8,6 +8,15 @@ export const PRESETS = [
   { id: 'slate', name: 'Slate', accent: '#475569', light: { bg: '#f3f4f6', surface: '#ffffff' }, dark: { bg: '#0f1115', surface: '#181b21' } },
 ];
 
+// animated backgrounds (drawn by SceneBackground.vue)
+export const SCENES = [
+  { id: '', name: 'None', icon: '🚫' },
+  { id: 'valentine', name: 'Valentine', icon: '💖' },
+  { id: 'christmas', name: 'Christmas', icon: '🎄' },
+  { id: 'halloween', name: 'Halloween', icon: '🎃' },
+  { id: 'pixel', name: 'Game Pixel', icon: '👾' },
+];
+
 export const DEFAULT_PREFS = {
   mode: 'system', // system | light | dark
   preset: 'ocean',
@@ -17,6 +26,9 @@ export const DEFAULT_PREFS = {
   bgDim: 0.55,
   fontSize: 16,
   use24: false,
+  scene: '', // animated background: '' | valentine | christmas | halloween | pixel
+  sfx: false, // sound effects
+  sfxVolume: 0.4,
   fun: true, // game style: chunky buttons, quest progress bar, confetti
   tpl: {},
 };
@@ -31,6 +43,7 @@ export function applyTheme(prefs) {
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.style = preset.style || '';
   root.dataset.fun = prefs.fun === false ? '' : '1';
+  root.dataset.scene = prefs.scene || '';
   root.style.setProperty('--accent', accent);
   root.style.setProperty('--bg', pal.bg);
   root.style.setProperty('--surface', pal.surface);
