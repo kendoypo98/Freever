@@ -482,3 +482,6 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-style='pixel'] .quest-fill { border-radius: 0; background: repeating-linear-gradient(90deg, var(--accent) 0 10px, transparent 10px 12px); }
 :root[data-style='pixel'] .confetti i { border-radius: 0; }
 :root[data-style='pixel'] body { image-rendering: pixelated; }
+
+.coverage { margin-top: 1rem; }
+.coverage .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; font-size: .8rem; }
