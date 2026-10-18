@@ -6,7 +6,7 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
 
 ## 1. Set up Supabase (free)
 1. Create a project at https://supabase.com.
-2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset), then `004_open_signup.sql` (anyone may create an account). Run all four in order; each is safe to run twice.
+2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset), then `004_open_signup.sql` (anyone may create an account), then `005_user_lab_scan.sql` (students can scan a laboratory picture). Run all five in order; each is safe to run twice.
    **Before you publish the site**, set the admin setup code so a stranger cannot become the admin:
    ```sql
    insert into public.app_config (id, admin_code) values (1, 'choose-a-long-secret')
@@ -42,6 +42,7 @@ Tip: if the project lives in a OneDrive/Dropbox folder, exclude `node_modules` f
 ## 3. First use
 - **The first account created becomes the admin**, so create yours first. If you set an admin setup code (step 1), the Create account form asks for it on that first account only.
 - **Admin, once:** import the S.A schedule (ITO DEPARTMENT sheet: yellow = duty, blue = class) and press **Save to database**. Then choose the **Laboratory Schedule picture**: FreeVer reads every room and its open hours automatically (needs the AI function, step 5). Check the table, make sure each row has a room name (for example `5501`), and press **Save laboratory schedule**.
+- **Every S.A** can also scan their own laboratory schedule picture on the "You" step (kept on their device only). FreeVer shows how the laboratory hours overlap their duty before generating.
 - **Every S.A:** register with your **Student ID** and **S.A name** (it must match the schedule), log in, pick the day(s) Monday-Saturday, and FreeVer compares each room's open hours with everyone's schedule. Relievers are chosen only from students who are **on duty (yellow) and not in class (blue)** at that hour, rotating the names. **White cells are non-working hours:** nobody is assigned from white automatically. In the review screen you can still pick an off-duty student by hand (Change > off-duty students), but only after confirming the supervisor approved it; the message then marks them **(OT)**.
 - Review the list (Leave/Absent re-picks the hour automatically; Change lets you choose anyone), then copy the message, which looks like this:
   ```

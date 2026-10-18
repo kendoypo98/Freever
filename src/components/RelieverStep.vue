@@ -4,7 +4,7 @@ import Icon from './Icon.vue';
 import { DAYS, DAY_NAMES, fmtRange, swapTeam, niceName, initialsOf } from '../lib/schedule.js';
 import { rankCandidates, generateSlots, pickReliever, isOvertime, pieceKey } from '../lib/reliever.js';
 import { formatDate } from '../lib/message.js';
-import { state, setResult, ask, showToast } from '../store.js';
+import { state, setResult, ask, showToast, isAdmin } from '../store.js';
 
 const STATUS_LABEL = { leave: 'on leave', absent: 'absent' };
 const notes = ref({}); // pieceKey -> why this person was picked
@@ -143,7 +143,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
       </div>
     </div>
     <p v-if="!state.labs.length" class="notice err" role="alert">
-      <Icon name="alert" :size="16" /> The laboratory schedule has not been saved yet, so there is nothing to cover. Ask the admin to import it.
+      <Icon name="alert" :size="16" /> The laboratory schedule is missing, so there is nothing to cover. {{ isAdmin() ? 'Import and save it in step 1.' : 'Go back and scan the laboratory picture.' }}
     </p>
     <p v-else class="notice">
       <Icon name="clock" :size="16" /> One list per laboratory room, one hour per line, only while that room is open. <b>OT</b> = non-working hours (white): only with the supervisor's approval.

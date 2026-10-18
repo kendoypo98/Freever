@@ -126,17 +126,23 @@ Deno.serve(async (req) => {
   });
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return json({ error: 'Please log in.' }, 401);
-  // admins only, with a rate limit shared by every function instance (see ai_gate in 003_hardening.sql)
-  const { data: gate, error: gateError } = await supabase.rpc('ai_gate', { per_minute: LIMIT_PER_MIN });
-  if (gateError) return json({ error: 'AI access is not set up yet. Run 003_hardening.sql in Supabase.' }, 500);
-  if (gate === 'forbidden') return json({ error: 'Only the admin can use the AI tools.' }, 403);
+
+  let body: Record<string, unknown>;
+  try { body = await req.json(); } catch { return json({ error: 'Bad request.' }, 400); }
+
+  // Rate limits are counted in the database, so they hold across every function instance.
+  // Reading a laboratory picture is open to every signed-in student (ai_gate_user, 005_user_lab_scan.sql);
+  // reading the S.A schedule and checking it are admin only (ai_gate, 003_hardening.sql).
+  const studentScan = body.action === 'labs';
+  const { data: gate, error: gateError } = studentScan
+    ? await supabase.rpc('ai_gate_user', { per_minute: 4, per_hour: 30 })
+    : await supabase.rpc('ai_gate', { per_minute: LIMIT_PER_MIN });
+  if (gateError) return json({ error: 'AI access is not set up yet. Run the SQL files in supabase/migrations (003 and 005).' }, 500);
+  if (gate === 'forbidden') return json({ error: studentScan ? 'Please log in.' : 'Only the admin can use the AI tools.' }, 403);
   if (gate === 'limited') return json({ error: 'Too many requests. Wait a minute.' }, 429);
 
   const key = Deno.env.get('GEMINI_API_KEY');
   if (!key) return json({ error: 'AI is not configured on the server.' }, 500);
-
-  let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return json({ error: 'Bad request.' }, 400); }
 
   try {
     if (body.action === 'extract') {

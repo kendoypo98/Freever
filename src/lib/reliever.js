@@ -1,5 +1,20 @@
 import { overlaps, DAYS } from './schedule.js';
 
+/**
+ * What the lab schedule asks of one person: for every room that is open during their duty on `day`,
+ * the time ranges that need a reliever. [{ lab, ranges: [{ start, end }] }]
+ */
+export function coverageByLab(shifts, labs, day) {
+  const byLab = new Map();
+  for (const slot of buildSlots(shifts.filter((s) => s.day === day), labs)) {
+    const ranges = byLab.get(slot.lab) || [];
+    const last = ranges[ranges.length - 1];
+    if (last && last.end === slot.start) last.end = slot.end; else ranges.push({ start: slot.start, end: slot.end });
+    byLab.set(slot.lab, ranges);
+  }
+  return [...byLab].map(([lab, ranges]) => ({ lab, ranges }));
+}
+
 /** One reliever slot = one lab room, one day, at most one clock hour. */
 export const pieceKey = (p) => `${p.day}|${p.lab || ''}|${p.start}|${p.end}`;
 

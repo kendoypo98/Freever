@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, watchEffect } from 'vue';
 import Icon from './Icon.vue';
+import LabScan from './LabScan.vue';
 import { DAYS, DAY_NAMES, fmtRange, findUniqueName, niceName } from '../lib/schedule.js';
+import { coverageByLab } from '../lib/reliever.js';
 import { state, isAdmin, generate } from '../store.js';
 
 const query = ref('');
@@ -15,6 +17,13 @@ const duty = computed(() => (selected.value ? selected.value.shifts.filter((s) =
 const workDays = computed(() => DAYS.filter((d) => duty.value.some((s) => s.day === d)));
 const classOn = (d) => selected.value.shifts.filter((s) => s.day === d && s.type === 'class');
 const dutyOn = (d) => duty.value.filter((s) => s.day === d);
+
+// the comparison, shown before generating: where the laboratory hours overlap the student's duty
+const coverage = computed(() => state.days.map((day) => ({
+  day,
+  duty: dutyOn(day),
+  rooms: coverageByLab(duty.value, state.labs, day),
+})));
 
 function pick(sa) {
   state.me = { name: sa.name };
@@ -65,11 +74,27 @@ function toggle(d) {
         </button>
       </div>
       <p v-if="!workDays.length" class="notice err" role="alert">No duty hours found for you in this schedule.</p>
+
+      <div v-if="state.labs.length && coverage.length" class="compare">
+        <h3>Your duty compared with the laboratory schedule</h3>
+        <div v-for="c in coverage" :key="c.day" class="comparerow">
+          <b>{{ DAY_NAMES[c.day] }}</b>
+          <span class="muted small">Duty: {{ c.duty.map((s) => fmtRange(s.start, s.end, state.prefs.use24)).join(', ') }}</span>
+          <template v-if="c.rooms.length">
+            <span v-for="r in c.rooms" :key="r.lab" class="small">
+              Room {{ r.lab }} is open: needs a reliever {{ r.ranges.map((x) => fmtRange(x.start, x.end, state.prefs.use24)).join(', ') }}
+            </span>
+          </template>
+          <span v-else class="muted small">No laboratory is open during your duty, so no reliever is needed.</span>
+        </div>
+      </div>
+
+      <LabScan v-if="!admin" />
     </template>
 
     <div class="actions">
       <button v-if="isAdmin()" @click="state.step = 0"><Icon name="left" :size="16" /> Back</button>
-      <button class="primary" :disabled="!selected || !state.days.length" @click="generate">
+      <button class="primary" :disabled="!selected || !state.days.length || !state.labs.length" @click="generate">
         Generate reliever <Icon name="right" :size="16" />
       </button>
     </div>

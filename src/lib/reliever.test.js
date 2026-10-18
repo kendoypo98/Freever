@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSlots, generateSlots, isOvertime, pickReliever, pieceKey, rankCandidates } from './reliever.js';
+import { buildSlots, coverageByLab, generateSlots, isOvertime, pickReliever, pieceKey, rankCandidates } from './reliever.js';
 
 const me = { name: 'ME' };
 const sa = (name, shifts = [], team = '') => ({ name, team, shifts });
@@ -102,5 +102,22 @@ describe('pickReliever / rankCandidates', () => {
     const args = { model, me, slot, dateKey: '2026-10-19', absent: {}, load: {} };
     expect(pickReliever({ ...args, avoid: new Set(['A']) })).toBe('B');
     expect(pickReliever({ ...args, absent: { '2026-10-19|A': 'leave', '2026-10-19|B': 'leave' } })).toBeNull();
+  });
+});
+
+describe('coverageByLab', () => {
+  it('shows, per room, the ranges of a duty shift that need a reliever', () => {
+    const out = coverageByLab(
+      [duty('MON', H(7), H(15)), duty('TUE', H(7), H(9))],
+      [lab('5501', 'MON', H(7), H(12)), lab('5502', 'MON', H(13), H(18)), lab('5501', 'TUE', H(10), H(12))],
+      'MON',
+    );
+    expect(out).toEqual([
+      { lab: '5501', ranges: [{ start: H(7), end: H(12) }] },
+      { lab: '5502', ranges: [{ start: H(13), end: H(15) }] },
+    ]);
+  });
+  it('is empty when no room is open during the duty', () => {
+    expect(coverageByLab([duty('TUE', H(7), H(9))], [lab('5501', 'TUE', H(10), H(12))], 'TUE')).toEqual([]);
   });
 });

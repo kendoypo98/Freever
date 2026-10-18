@@ -16,6 +16,7 @@ export const state = reactive({
   model: null,
   uploadedAt: null,
   labs: [],
+  labSource: 'shared', // 'shared' = saved by the admin, 'mine' = scanned by this student on this device
   status: { loading: false, error: '' },
   initError: '', // the session check failed for a reason other than being logged out
   toast: '',
@@ -77,7 +78,10 @@ export async function loadData() {
   } catch (e) {
     state.status = { loading: false, error: e.message };
   }
-  try { state.labs = await loadLabs(); } catch { /* labs are optional: shifts are simply not clipped */ }
+  try { state.labs = await loadLabs(); } catch { /* the schedule simply has no rooms yet */ }
+  // a student's own laboratory scan (kept on this device) replaces the shared one; the admin always uses the shared one
+  const mine = load('mylabs', null);
+  if (!isAdmin() && Array.isArray(mine) && mine.length) { state.labs = mine; state.labSource = 'mine'; } else state.labSource = 'shared';
   restoreFlow();
 }
 
@@ -104,7 +108,7 @@ export function enter(profile) {
   if (!profile) return;
   setUser(profile.id); // scope local prefs to this account
   setPrefs(load('prefs', {}));
-  state.model = null; state.labs = []; state.step = null;
+  state.model = null; state.labs = []; state.labSource = 'shared'; state.step = null;
   state.me = null; state.days = []; state.dates = {}; state.absent = {}; state.pieces = []; state.assignments = {};
   loadData();
 }
@@ -144,6 +148,20 @@ watch(() => [state.model, state.me], () => {
     state.me = null; state.days = []; state.pieces = []; state.assignments = {};
   }
 });
+
+/** Use a laboratory schedule the student scanned themselves (this device only; nothing is saved for others). */
+export function setMyLabs(labs) {
+  state.labs = labs; state.labSource = 'mine';
+  save('mylabs', labs);
+  state.pieces = []; state.assignments = {}; // they were built from the old rooms
+}
+
+export async function clearMyLabs() {
+  remove('mylabs');
+  state.labSource = 'shared';
+  try { state.labs = await loadLabs(); } catch { state.labs = []; }
+  state.pieces = []; state.assignments = {};
+}
 
 export function setResult(r) { state.pieces = r.pieces; state.assignments = r.assignments; }
 
