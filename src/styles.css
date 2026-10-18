@@ -624,3 +624,42 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-style='pixel'] .app .rc-name { font-family: 'Press Start 2P', ui-monospace, monospace; font-size: .62rem; line-height: 1.6; }
 
 @media (max-width: 560px) { .rgrid { grid-template-columns: minmax(0, 330px); } }
+
+/* ---- compact trading cards (overrides the sizes above) ---- */
+.rgrid { grid-template-columns: repeat(auto-fill, minmax(158px, 186px)); gap: 24px 14px; margin-top: 16px; }
+.rc-title { padding: 6px 26px; }
+.rc-name { font-size: .82rem; }
+.rc-gem { width: 22px; height: 22px; font-size: .72rem; }
+.rc-art { padding: 10px 0; }
+.rc-emblem { width: 60px; height: 60px; }
+.rc-emblem .avatar { width: 54px; height: 54px; font-size: 1.05rem; }
+.rc-ribbon { left: 10px; min-width: 24px; padding: 3px 4px 10px; font-size: .66rem; }
+.rc-band { padding: 5px 8px; gap: 6px; }
+.rc-type { font-size: .62rem; }
+.rc-hex { width: 34px; height: 38px; font-size: .95rem; }
+.rc-stat { font-size: .7rem; gap: 3px; }
+.rc-text { gap: 6px; padding: 6px 8px 10px; font-size: .76rem; }
+.rc-time { font-size: .72rem; gap: 4px; }
+.rcard .rowtools { gap: 6px; }
+.rcard .seggroup { width: 100%; }
+.rcard .seg { flex: 1; padding: .25rem .3rem; font-size: .68rem; }
+.rcard .rowtools > button { width: 100%; padding: .3rem .5rem; font-size: .72rem; }
+.rcard .alts { padding: 6px; }
+.rcard .alt { padding: .3rem .4rem; font-size: .72rem; flex-wrap: wrap; }
+
+:root[data-fun='1'] .app .rcard { padding: 5px; gap: 5px; border-width: 3px; border-radius: 16px; box-shadow: 0 4px 0 #0d0a1a, 0 0 22px -6px var(--rar); }
+:root[data-fun='1'] .app .rc-title { padding: 6px 22px; border-width: 2px; border-radius: 9px; }
+:root[data-fun='1'] .app .rc-gem { width: 24px; height: 24px; border-width: 2px; }
+:root[data-fun='1'] .app .rc-gem.left { left: -8px; } :root[data-fun='1'] .app .rc-gem.right { right: -8px; }
+:root[data-fun='1'] .app .rc-art { min-height: 104px; border-width: 2px; border-radius: 9px; }
+:root[data-fun='1'] .app .rc-art::before { top: 8px; right: 14px; font-size: .9rem; }
+:root[data-fun='1'] .app .rc-art::after { left: 16px; bottom: 10px; font-size: .7rem; }
+:root[data-fun='1'] .app .rc-ribbon { top: -2px; left: 8px; padding: 4px 5px 11px; }
+:root[data-fun='1'] .app .rc-emblem { width: 68px; height: 74px; }
+:root[data-fun='1'] .app .rc-emblem .avatar { width: 61px; height: 67px; font-size: 1.1rem; }
+:root[data-fun='1'] .app .rc-band { padding: 4px 8px; border-radius: 8px; }
+:root[data-fun='1'] .app .rc-hex { width: 40px; height: 44px; margin: -12px 0; font-size: 1.1rem; }
+:root[data-fun='1'] .app .rc-text { padding: 7px 8px 9px; border-width: 2px; border-radius: 9px; }
+:root[data-fun='1'] .app .rcard:hover { transform: translateY(-3px) rotate(-.5deg); }
+
+@media (max-width: 560px) { .rgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; } }
