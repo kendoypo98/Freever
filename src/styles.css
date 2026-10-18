@@ -764,3 +764,14 @@ input, select, textarea { font-size: 16px; }
   :root[data-fun='1'] .app button.stepbtn { border-radius: 999px; font-size: .9rem; }
   :root[data-style='pixel'] .app button.stepbtn { border-radius: 0; font-size: .6rem; font-family: 'Press Start 2P', ui-monospace, monospace; }
 }
+
+/* ---- cards: nothing may run past the card edge ---- */
+.rcard, .rc-text, .rc-text > * { min-width: 0; }
+.rc-text { overflow-wrap: anywhere; }
+.rc-time { display: block; line-height: 1.3; }
+.rc-time .icon-svg { margin-right: 4px; }
+.rcard .seggroup { display: flex; width: 100%; }
+.rcard .seg { flex: 1 1 0; min-width: 0; justify-content: center; padding: .35rem .2rem; font-size: .7rem; white-space: nowrap; }
+.rcard .seg.available { display: none; } /* the band already says ON DUTY; Leave and Absent get the room */
+.rcard button.link { width: 100%; white-space: normal; text-align: center; line-height: 1.25; font-size: .7rem; }
+.rcard .rowtools > button { white-space: normal; }
