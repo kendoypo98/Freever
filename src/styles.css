@@ -487,7 +487,6 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 .scene canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 :root:not([data-scene='']) body { background: transparent; }
 :root[data-scene='valentine'] .scene { background: linear-gradient(160deg, #ffd9e6, #ffb3cc 60%, #ff9ec0); }
-:root[data-scene='christmas'] .scene { background: linear-gradient(180deg, #d7ecdf, #f6dadd 85%, #ffffff); }
 :root[data-scene='halloween'] .scene { background: linear-gradient(180deg, #ffe3c2, #e8d5f7); }
 :root[data-scene='pixel'] .scene {
   background-color: #cfe6ff;
@@ -495,7 +494,6 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
   background-size: 32px 32px; animation: freever-grid 6s linear infinite;
 }
 :root[data-theme='dark'][data-scene='valentine'] .scene { background: linear-gradient(160deg, #2a0f1f, #4a1330 70%, #5b1740); }
-:root[data-theme='dark'][data-scene='christmas'] .scene { background: linear-gradient(180deg, #0b2a1a, #14301f 60%, #3a0d14); }
 :root[data-theme='dark'][data-scene='halloween'] .scene { background: linear-gradient(180deg, #1a0b2e, #2a1040 65%, #3a1a05); }
 :root[data-theme='dark'][data-scene='pixel'] .scene {
   background-color: #0d0a24;
@@ -783,3 +781,50 @@ input, select, textarea { font-size: 16px; }
 .daygrid .tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 :root[data-style='pixel'] .app .daycard { font-size: .62rem; line-height: 1.6; }
 :root[data-style='pixel'] .app .daycard b { font-family: 'Press Start 2P', ui-monospace, monospace; font-size: .62rem; margin-bottom: 4px; }
+
+
+/* ================= Christmas ================= */
+/* pine-green sky fading to red, snowy hills at the bottom */
+:root[data-scene='christmas'] .scene {
+  background:
+    radial-gradient(150px 62px at 12% 100%, #f8fafc 96%, transparent 100%),
+    radial-gradient(230px 84px at 46% 100%, #ffffff 96%, transparent 100%),
+    radial-gradient(170px 66px at 82% 100%, #f1f5f9 96%, transparent 100%),
+    linear-gradient(180deg, #2f9e5c 0%, #1c7c46 58%, #a30f27 100%);
+}
+:root[data-theme='dark'][data-scene='christmas'] .scene {
+  background:
+    radial-gradient(150px 62px at 12% 100%, #dbe4ee 96%, transparent 100%),
+    radial-gradient(230px 84px at 46% 100%, #e6edf5 96%, transparent 100%),
+    radial-gradient(170px 66px at 82% 100%, #cfd9e5 96%, transparent 100%),
+    linear-gradient(180deg, #06261a 0%, #0c3a24 58%, #5a0d1c 100%);
+}
+/* blinking string lights along the top edge (two sets that take turns) */
+:root[data-scene='christmas'] .scene::before, :root[data-scene='christmas'] .scene::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 36px; pointer-events: none; }
+:root[data-scene='christmas'] .scene::before {
+  background:
+    linear-gradient(#0b0b0b, #0b0b0b) 0 7px / 100% 2px no-repeat,
+    radial-gradient(circle at 12px 22px, #ef4444 0 6px, transparent 7px) 0 0 / 96px 36px,
+    radial-gradient(circle at 60px 22px, #facc15 0 6px, transparent 7px) 0 0 / 96px 36px;
+  filter: drop-shadow(0 0 5px #ef4444) drop-shadow(0 0 5px #facc15);
+  animation: freever-lights 1.8s ease-in-out infinite;
+}
+:root[data-scene='christmas'] .scene::after {
+  background:
+    radial-gradient(circle at 36px 22px, #22c55e 0 6px, transparent 7px) 0 0 / 96px 36px,
+    radial-gradient(circle at 84px 22px, #3b82f6 0 6px, transparent 7px) 0 0 / 96px 36px;
+  filter: drop-shadow(0 0 5px #22c55e) drop-shadow(0 0 5px #3b82f6);
+  animation: freever-lights 1.8s ease-in-out .9s infinite;
+}
+@keyframes freever-lights { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* candy-cane frames on the reliever cards, snowflake sparkles in the art */
+:root[data-scene='christmas'][data-fun='1'] .app .rcard:not([data-rarity='none']) { background: repeating-linear-gradient(45deg, #dc2626 0 9px, #f8fafc 9px 18px); }
+:root[data-scene='christmas'][data-fun='1'] .app .rc-art::before { content: '❄'; }
+:root[data-scene='christmas'][data-fun='1'] .app .rc-art::after { content: '❄'; }
+:root[data-scene='christmas'][data-fun='1'] .app .card { border-top-style: dashed; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-iteration-count: 1 !important; }
+  :root[data-scene='christmas'] .scene::before, :root[data-scene='christmas'] .scene::after { animation: none !important; }
+}
