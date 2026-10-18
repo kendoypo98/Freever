@@ -16,7 +16,6 @@ export async function getProfile() {
 const REGISTRATION_PROBLEMS = {
   sid_taken: 'That Student ID already has an account. Log in instead.',
   name_taken: 'That S.A name already has an account. Log in instead, or ask the admin to reset your password.',
-  not_in_schedule: 'That S.A name is not in the schedule. Type it exactly as written there, or ask the admin to upload the latest schedule.',
   setup_code_required: 'This is the first account (the admin). Enter the admin setup code.',
   bad_setup_code: 'That admin setup code is not correct.',
 };
@@ -31,7 +30,7 @@ export async function register(studentId, saName, password, adminCode = '') {
   const sid = studentId.trim();
   const name = saName.trim().replace(/\s+/g, ' ');
   if (!/^[A-Za-z0-9-]{3,20}$/.test(sid)) throw new Error('Student ID: 3-20 letters, numbers or dashes.');
-  if (name.length < 3) throw new Error('Enter your full S.A name as written in the schedule.');
+  if (name.length < 3) throw new Error('Enter your full S.A name.');
   if (password.length < 8) throw new Error('Password must be at least 8 characters.');
 
   // ask the database first: a failed sign-up trigger only ever comes back as an unexplained 500
@@ -49,9 +48,8 @@ export async function register(studentId, saName, password, adminCode = '') {
     const m = error.message || '';
     if (/profiles_student_id_key|student_id/i.test(m)) throw new Error('That Student ID already has an account.');
     if (/setup code/i.test(m)) throw new Error(REGISTRATION_PROBLEMS.bad_setup_code);
-    if (/not in the schedule/i.test(m)) throw new Error('That S.A name is not in the schedule. Type it as written there.');
     if (/profiles_sa_name_key|sa_name/i.test(m)) throw new Error('That S.A name already has an account.');
-    if (/database error/i.test(m)) throw new Error('Could not create the account. Likely causes: that Student ID or S.A name is already registered, the S.A name is not in the schedule, or the latest database update (supabase/migrations/003_hardening.sql) has not been run.');
+    if (/database error/i.test(m)) throw new Error('Could not create the account. Likely causes: that Student ID or S.A name is already registered, or the latest database updates (supabase/migrations, 003 and 004) have not been run.');
     throw new Error(m);
   }
   if (!data.session) throw new Error('Account created but e-mail confirmation is on. Turn it off in Supabase (Auth > Providers > Email).');

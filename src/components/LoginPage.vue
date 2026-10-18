@@ -104,7 +104,7 @@ function setMode(m) {
 
         <h2 class="text-2xl font-bold tracking-tight">{{ isLogin ? 'Welcome back' : 'Join FreeVer' }}</h2>
         <p class="mb-5 mt-1 text-[var(--muted)]">
-          {{ isLogin ? 'Log in to find your reliever.' : 'Use your Student ID and your S.A name from the schedule.' }}
+          {{ isLogin ? 'Log in to find your reliever.' : 'Use your Student ID and your S.A name.' }}
         </p>
 
         <p v-if="!configured" class="notice err mb-4">
@@ -119,7 +119,7 @@ function setMode(m) {
             <FloatField v-model="studentId" label="Student ID" icon="user" placeholder="e.g. 2024-00123"
               enterkeyhint="next" />
             <FloatField v-model="saName" label="S.A name" icon="users" placeholder="e.g. Juan Dela Cruz"
-              autocomplete="name" enterkeyhint="next" hint="Type it as it is written in the schedule." />
+              autocomplete="name" enterkeyhint="next" hint="Type it as written in the schedule so your duty days are found." />
             <FloatField v-if="firstAccount" v-model="adminCode" label="Admin setup code" icon="lock" type="password"
               autocomplete="off" enterkeyhint="next" hint="You are the first user, so this account becomes the admin. Use the setup code from your database setup." />
           </template>

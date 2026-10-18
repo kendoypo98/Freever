@@ -6,7 +6,7 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
 
 ## 1. Set up Supabase (free)
 1. Create a project at https://supabase.com.
-2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset). Run all three in order; each is safe to run twice.
+2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset), then `004_open_signup.sql` (anyone may create an account). Run all four in order; each is safe to run twice.
    **Before you publish the site**, set the admin setup code so a stranger cannot become the admin:
    ```sql
    insert into public.app_config (id, admin_code) values (1, 'choose-a-long-secret')

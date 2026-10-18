@@ -44,7 +44,7 @@ function toggle(d) {
     </div>
 
     <p v-if="!selected && !account && !admin" class="notice err" role="alert">
-      <Icon name="alert" :size="16" /> We can't find "{{ niceName(state.profile.name) }}" in the saved schedule. Ask the admin to check the spelling or upload the latest schedule, then reload this page.
+      <Icon name="alert" :size="16" /> "{{ niceName(state.profile.name) }}" is not in the saved schedule, so there are no duty hours to cover yet. If your name is spelled differently there, ask the admin to reset your account with the spelling from the schedule. Otherwise ask them to upload the latest schedule, then reload this page.
     </p>
     <template v-if="!selected && !account && admin">
       <input v-model="query" type="text" class="search" placeholder="Your name (first and last name)" autocomplete="off"
