@@ -162,7 +162,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
 
       <template v-for="L in d.labs" :key="L.lab">
       <h4 class="labhead">Room {{ L.lab }}</h4>
-      <div v-for="r in L.rows" :key="r.key" class="shiftrow">
+      <div v-for="r in L.rows" :key="r.key" class="shiftrow" :data-rarity="!r.cur ? 'none' : r.ot ? 'ot' : 'duty'">
         <div class="time"><Icon name="clock" :size="15" /> {{ fmtRange(r.p.start, r.p.end, use24) }}</div>
 
         <div v-if="r.cur" class="person">
@@ -174,6 +174,7 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
               <span v-else-if="r.cur.free" class="pill bad">Off duty: needs supervisor approval</span>
               <span v-else class="pill bad">In class</span>
               <span v-if="r.cur.partner" class="pill">Block partner</span>
+              <span class="pill" title="Hours this person covers on this list">{{ Math.round(((r.cur.load || 0) / 60) * 10) / 10 }}h assigned</span>
               <span v-if="r.ot" class="pill bad" title="Covering outside their own duty hours">OT</span>
               <span v-if="r.cur.status" class="pill bad">{{ STATUS_LABEL[r.cur.status] }}</span>
             </div>

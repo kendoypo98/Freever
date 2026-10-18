@@ -515,3 +515,44 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 .scenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: .4rem 0 .6rem; }
 .scene-btn { justify-content: flex-start; }
 .scene-btn.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+
+
+/* ================= RPG character cards (Game style) ================= */
+:root[data-fun='1'] .app .card { border-top: 6px solid var(--accent); box-shadow: 0 5px 0 var(--border), 0 0 34px -12px color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* quest panels: one per day, one banner per laboratory room */
+:root[data-fun='1'] .app .daybox { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+:root[data-fun='1'] .app .daybox > .row h3 { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 2px solid var(--accent); }
+:root[data-fun='1'] .app .daybox > .row h3::before { content: '📜'; }
+:root[data-fun='1'] .app .labhead { display: inline-flex; align-items: center; gap: 8px; margin: 1.2rem 0 .2rem; padding: 4px 14px; border-radius: 12px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 2px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }
+:root[data-fun='1'] .app .labhead::before { content: '🧪'; }
+
+/* one reliever slot = one character card; the colour is the "rarity": green on duty, purple overtime, grey empty */
+:root[data-fun='1'] .app .shiftrow {
+  --rar: var(--ok);
+  position: relative; margin-top: 22px; padding: 18px 14px 14px;
+  grid-template-columns: 1fr auto; align-items: center;
+  border: 2px solid var(--rar); border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rar) 9%, var(--surface)), var(--surface) 70%);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--rar) 55%, #000), 0 0 24px -8px var(--rar);
+  animation: freever-deal .4s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+:root[data-fun='1'] .app .shiftrow[data-rarity='ot'] { --rar: #7e22ce; }
+:root[data-theme='dark'][data-fun='1'] .app .shiftrow[data-rarity='ot'] { --rar: #c084fc; }
+:root[data-fun='1'] .app .shiftrow[data-rarity='none'] { --rar: var(--muted); border-style: dashed; box-shadow: none; background: var(--surface); }
+:root[data-fun='1'] .app .shiftrow:hover { transform: translateY(-2px); }
+:root[data-fun='1'] .app .shiftrow .time { position: absolute; top: -15px; left: 14px; padding: 2px 12px; border-radius: 999px; font-size: .8rem; font-weight: 800; color: var(--rar); background: var(--surface); border: 2px solid var(--rar); }
+:root[data-fun='1'] .app .shiftrow .avatar { width: 56px; height: 56px; border-radius: 16px; font-size: 1.05rem; color: var(--rar); border: 3px solid var(--rar); background: linear-gradient(145deg, color-mix(in srgb, var(--rar) 30%, var(--surface)), color-mix(in srgb, var(--rar) 8%, var(--surface))); box-shadow: 0 0 0 3px var(--surface), 0 0 18px -2px var(--rar); }
+:root[data-fun='1'] .app .shiftrow .who2 b { font-size: 1.12rem; font-weight: 800; }
+:root[data-fun='1'] .app .shiftrow .pill.ok { color: var(--ok); }
+@keyframes freever-deal { from { transform: translateY(14px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 720px) { :root[data-fun='1'] .app .shiftrow { grid-template-columns: 1fr; padding: 18px 12px 12px; } }
+
+/* pick-a-day cards get a badge when chosen */
+:root[data-fun='1'] .app .daycard { position: relative; }
+:root[data-fun='1'] .app .daycard.on::after { content: '✓'; position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 800; font-size: .85rem; color: #fff; background: var(--accent); border: 2px solid var(--surface); }
+
+/* Pixel Quest keeps its square, hard-shadow look */
+:root[data-style='pixel'] .app .shiftrow { border: 3px solid var(--rar); border-radius: 0; box-shadow: 4px 4px 0 var(--rar); }
+:root[data-style='pixel'] .app .shiftrow .time, :root[data-style='pixel'] .app .shiftrow .avatar, :root[data-style='pixel'] .app .labhead, :root[data-style='pixel'] .app .daybox > .row h3 { border-radius: 0; }
+:root[data-style='pixel'] .app .card { border-top: 8px solid var(--accent); }
