@@ -775,3 +775,5 @@ input, select, textarea { font-size: 16px; }
 .rcard .seg.available { display: none; } /* the band already says ON DUTY; Leave and Absent get the room */
 .rcard button.link { width: 100%; white-space: normal; text-align: center; line-height: 1.25; font-size: .7rem; }
 .rcard .rowtools > button { white-space: normal; }
+
+.rcard button.swapbtn { width: 100%; padding: .35rem .5rem; font-size: .7rem; white-space: normal; line-height: 1.2; color: var(--accent); }

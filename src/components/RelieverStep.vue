@@ -240,8 +240,8 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
             <button v-if="r.current" class="link small" @click="setPiece(r.key, null)">Remove reliever</button>
           </div>
 
-          <button v-if="r.cur && hasTeam(r.cur.name)" class="link small" title="Columns look swapped? Swap this person with their block partner" @click="swapBlock(r.cur.name)">
-            Swap with block partner
+          <button v-if="r.cur && hasTeam(r.cur.name)" type="button" class="swapbtn" title="Columns look swapped? Swap this person with their block partner" @click="swapBlock(r.cur.name)">
+            <Icon name="swap" :size="14" /> Swap with partner
           </button>
         </div>
       </article>
