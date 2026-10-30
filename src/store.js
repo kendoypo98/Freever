@@ -8,6 +8,7 @@ import { configured, supabase } from './lib/supabase.js';
 import { DAYS } from './lib/schedule.js';
 import { generateSlots } from './lib/reliever.js';
 import { sfx } from './lib/sfx.js';
+import { isNetworkError, rememberProfile, forgetProfile, savedProfile } from './lib/offline.js';
 
 export const state = reactive({
   profile: undefined, // undefined = checking the session, null = logged out
@@ -20,8 +21,11 @@ export const state = reactive({
   labSource: 'shared', // 'shared' = saved by the admin, 'mine' = scanned by this student on this device
   status: { loading: false, error: '' },
   initError: '', // the session check failed for a reason other than being logged out
+  offline: false, // no connection: the schedule and profile come from the copy saved on this device
+  dataAt: null, // when the schedule on screen was last fetched from the server (ms)
   toast: '',
-  step: null, // null = pick a sensible first step once the schedule is loaded
+  step: null, // reliever wizard: 0 = setup (admin), 1 = you, 2 = reliever, 3 = message. null = pick a sensible one
+  tab: null, // today | week | wizard | inbox | setup. null = Today (the admin goes to Setup until a schedule exists)
   me: null,
   days: [],
   dates: {},
@@ -70,16 +74,27 @@ function nextDateFor(day, endMin = 0) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Keep a copy of the schedule on this device for offline use (called whenever the server's copy has just been read). */
+export function cacheSchedule(model, uploadedAt) {
+  state.dataAt = Date.now();
+  save('cache-schedule', { model, uploadedAt, at: state.dataAt });
+}
+
 export async function loadData() {
   state.status = { loading: true, error: '' };
   try {
     const r = await loadSchedule();
-    if (r) { state.model = r.model; state.uploadedAt = r.uploadedAt; }
+    if (r) { state.model = r.model; state.uploadedAt = r.uploadedAt; cacheSchedule(r.model, r.uploadedAt); }
+    else remove('cache-schedule');
+    state.offline = false;
     state.status = { loading: false, error: '' };
   } catch (e) {
-    state.status = { loading: false, error: e.message };
+    const cached = isNetworkError(e) ? load('cache-schedule', null) : null; // offline: use the copy saved on this device
+    if (cached) { state.model = cached.model; state.uploadedAt = cached.uploadedAt; state.dataAt = cached.at; state.offline = true; state.status = { loading: false, error: '' }; }
+    else state.status = { loading: false, error: e.message };
   }
-  try { state.labs = await loadLabs(); } catch { /* the schedule simply has no rooms yet */ }
+  try { state.labs = await loadLabs(); save('cache-labs', state.labs); }
+  catch (e) { const c = isNetworkError(e) ? load('cache-labs', null) : null; if (c) state.labs = c; /* else the schedule simply has no rooms yet */ }
   // a student's own laboratory scan (kept on this device) replaces the shared one; the admin always uses the shared one
   const mine = load('mylabs', null);
   if (!isAdmin() && Array.isArray(mine) && mine.length) { state.labs = mine; state.labSource = 'mine'; } else state.labSource = 'shared';
@@ -107,11 +122,12 @@ watch(() => [state.me, state.days, state.dates, state.absent, state.pieces, stat
 export function enter(profile) {
   state.profile = profile;
   if (!profile) return;
+  rememberProfile(profile); // lets the app open offline later
   setUser(profile.id); // scope local prefs to this account
   const saved = load('prefs', {});
-  if (saved.v !== 2) { delete saved.scene; delete saved.sfx; delete saved.sfxVolume; } // adopt the Halloween + sound defaults once
+  if (saved.v !== 4) { delete saved.sfx; delete saved.sfxVolume; delete saved.sfxHover; } // adopt the quiet interface sounds once
   setPrefs(saved);
-  state.model = null; state.labs = []; state.labSource = 'shared'; state.step = null;
+  state.model = null; state.labs = []; state.labSource = 'shared'; state.step = null; state.tab = null;
   state.me = null; state.days = []; state.dates = {}; state.absent = {}; state.pieces = []; state.assignments = {};
   loadData();
 }
@@ -123,9 +139,17 @@ export async function init() {
   try {
     enter(await getProfile());
   } catch (e) {
-    // could not reach the server: do not pretend the person logged out
-    state.initError = e.message || 'Could not reach the server.';
-    state.profile = null;
+    // no connection but still signed in on this device: open with the saved copy
+    let local = null;
+    if (isNetworkError(e)) {
+      try { const { data } = await supabase.auth.getSession(); local = data.session ? savedProfile(data.session.user.id) : null; } catch { /* ignore */ }
+    }
+    if (local) { state.offline = true; enter(local); }
+    else {
+      // could not reach the server: do not pretend the person logged out
+      state.initError = e.message || 'Could not reach the server.';
+      state.profile = null;
+    }
   }
   if (!listening) {
     listening = true;
@@ -133,7 +157,11 @@ export async function init() {
   }
 }
 
+window.addEventListener('offline', () => { state.offline = true; });
+window.addEventListener('online', () => { state.offline = false; if (state.profile) loadData(); }); // back online: refresh from the server
+
 export async function logout() {
+  forgetProfile();
   await signOut();
   state.view = 'landing';
   state.profile = null;
@@ -179,14 +207,20 @@ export function generate() {
   state.dates = dates;
   const duty = mine.shifts.filter((s) => s.type === 'duty' && state.days.includes(s.day));
   setResult(generateSlots({ model: state.model, me: state.me, shifts: duty, dates, absent: state.absent, labs: state.labs }));
-  state.step = 2;
+  goStep(2);
   showToast('Reliever list ready!');
   sfx.ready();
 }
 
+/** Move to a wizard step (0 is the admin's Setup screen) and show the tab that holds it. */
+export function goStep(n) {
+  state.step = n;
+  state.tab = n === 0 ? 'setup' : 'wizard';
+}
+
 export function resetFlow() {
   remove('wizard2');
-  state.step = isAdmin() ? 0 : 1;
+  goStep(1);
   state.me = null; state.days = []; state.dates = {}; state.absent = {}; state.pieces = []; state.assignments = {};
 }
 

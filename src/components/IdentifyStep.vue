@@ -4,7 +4,7 @@ import Icon from './Icon.vue';
 import LabScan from './LabScan.vue';
 import { DAYS, DAY_NAMES, fmtRange, findUniqueName, niceName } from '../lib/schedule.js';
 import { coverageByLab } from '../lib/reliever.js';
-import { state, isAdmin, generate } from '../store.js';
+import { state, isAdmin, generate, goStep } from '../store.js';
 
 const query = ref('');
 const selected = computed(() => (state.me ? state.model.sas.find((s) => s.name === state.me.name) : null));
@@ -90,7 +90,6 @@ function toggle(d) {
     </template>
 
     <div class="actions">
-      <button v-if="isAdmin()" @click="state.step = 0"><Icon name="left" :size="16" /> Back</button>
       <button class="primary" :disabled="!selected || !state.days.length || !state.labs.length" @click="generate">
         Generate reliever <Icon name="right" :size="16" />
       </button>

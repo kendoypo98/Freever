@@ -26,6 +26,26 @@ describe('buildSlots', () => {
   });
 });
 
+describe('two rooms open at the same time', () => {
+  it('never puts one person in two rooms in the same hour', () => {
+    const shifts = [duty('MON', H(8), H(10))];
+    const labs = [lab('5501', 'MON', H(8), H(10)), lab('5502', 'MON', H(8), H(10))];
+    const model = { sas: [sa('ME', shifts), sa('A', [duty('MON', H(7), H(12))]), sa('B', [duty('MON', H(7), H(12))])] };
+    const { pieces, assignments } = generateSlots({ model, me, shifts, dates, absent: {}, labs });
+    for (const p of pieces) {
+      const same = pieces.filter((q) => q.start === p.start && q.lab !== p.lab).map((q) => assignments[pieceKey(q)]);
+      expect(same).not.toContain(assignments[pieceKey(p)]);
+    }
+  });
+  it('leaves a slot empty rather than double-booking when nobody else is free', () => {
+    const shifts = [duty('MON', H(8), H(9))];
+    const labs = [lab('5501', 'MON', H(8), H(9)), lab('5502', 'MON', H(8), H(9))];
+    const model = { sas: [sa('ME', shifts), sa('A', [duty('MON', H(7), H(12))])] };
+    const { assignments } = generateSlots({ model, me, shifts, dates, absent: {}, labs });
+    expect(Object.values(assignments).filter(Boolean)).toEqual(['A']);
+  });
+});
+
 describe('generateSlots', () => {
   const labs = [lab('5501', 'MON', H(7), H(10))];
   const shifts = [duty('MON', H(7), H(10))];

@@ -34,7 +34,8 @@ export async function saveSchedule(model, firstIsRight) {
 
 export async function loadLabs() {
   const { data, error } = await supabase.from('lab_windows').select('lab, day, start_min, end_min').order('id');
-  if (error) return []; // table missing (migration 002 not run yet): behave as "no lab schedule"
+  // table missing (migration 002 not run yet): behave as "no lab schedule"; anything else (e.g. no network) is reported
+  if (error) { if (/relation|does not exist|schema cache/i.test(error.message)) return []; throw new Error(error.message); }
   return data.map((r) => ({ lab: r.lab, day: r.day, start: r.start_min, end: r.end_min }));
 }
 

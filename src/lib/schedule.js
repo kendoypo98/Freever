@@ -117,6 +117,11 @@ export function normalizeModel(raw) {
   return { sas };
 }
 
+/** A comparable fingerprint of a schedule: who works/studies when. Equal fingerprints = identical schedules (names are case-insensitive). */
+export const signature = (model) => JSON.stringify(
+  [...(model?.sas || [])].sort((a, b) => a.name.localeCompare(b.name))
+    .map((s) => [s.name.toLowerCase(), s.shifts.map((x) => [x.day, x.type, x.start, x.end]).sort()]));
+
 /** Local sanity checks. Returns [{level:'warn'|'info', text}] */
 export function validateModel(model) {
   const issues = [];

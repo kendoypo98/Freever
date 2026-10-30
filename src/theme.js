@@ -1,3 +1,5 @@
+import { hex, onColor, readableOn } from './lib/color.js';
+
 export const PRESETS = [
   { id: 'ocean', name: 'Ocean', accent: '#2563eb', light: { bg: '#f1f5fb', surface: '#ffffff' }, dark: { bg: '#0b1220', surface: '#131c2e' } },
   { id: 'forest', name: 'Forest', accent: '#15803d', light: { bg: '#f1f8f3', surface: '#ffffff' }, dark: { bg: '#0a150e', surface: '#112019' } },
@@ -10,11 +12,11 @@ export const PRESETS = [
 
 // animated backgrounds (drawn by SceneBackground.vue)
 export const SCENES = [
-  { id: '', name: 'None', icon: '🚫' },
-  { id: 'valentine', name: 'Valentine', icon: '💖' },
-  { id: 'christmas', name: 'Christmas', icon: '🎄' },
-  { id: 'halloween', name: 'Halloween', icon: '🎃' },
-  { id: 'pixel', name: 'Game Pixel', icon: '👾' },
+  { id: '', name: 'None', icon: 'slash' }, // icon = a glyph from lib/sprites.js
+  { id: 'valentine', name: 'Valentine', icon: 'heart' },
+  { id: 'christmas', name: 'Christmas', icon: 'tree' },
+  { id: 'halloween', name: 'Halloween', icon: 'pumpkin' },
+  { id: 'pixel', name: 'Game Pixel', icon: 'invader' },
 ];
 
 export const DEFAULT_PREFS = {
@@ -26,11 +28,13 @@ export const DEFAULT_PREFS = {
   bgDim: 0.55,
   fontSize: 16,
   use24: false,
-  v: 2, // settings version: older saved settings get the new Halloween + sound defaults once
-  scene: 'halloween', // animated background: '' | valentine | christmas | halloween | pixel
-  sfx: true, // sound effects
-  sfxVolume: 0.4,
-  fun: true, // game style: chunky buttons, quest progress bar, confetti
+  v: 4, // settings version: older saved settings get the new defaults once
+  scene: '', // animated background: '' | valentine | christmas | halloween | pixel (optional skins)
+  sfx: true, // quiet interface sounds (soft tap on click, a whisper on hover); switch off in Settings
+  sfxVolume: 0.3,
+  sfxHover: true, // the hover sound (mouse only)
+  fun: false, // Game style everywhere: chunky buttons, quest progress bar, confetti (optional)
+  cards: true, // game cards in the reliever review: RPG character cards, quest panels per day and room
   tpl: {},
 };
 
@@ -43,9 +47,12 @@ export function applyTheme(prefs) {
   const accent = prefs.useCustomAccent ? prefs.accent : preset.accent;
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.style = preset.style || (prefs.scene === 'pixel' ? 'pixel' : ''); // the Game Pixel scene brings the 8-bit shapes too
-  root.dataset.fun = prefs.fun === false ? '' : '1';
+  root.dataset.fun = prefs.fun ? '1' : '';
+  root.dataset.game = prefs.cards !== false || prefs.fun ? '1' : '';
   root.dataset.scene = prefs.scene || '';
   root.style.setProperty('--accent', accent);
+  root.style.setProperty('--on-accent', onColor(accent)); // text on accent-coloured buttons and badges
+  root.style.setProperty('--accent-ink', readableOn(accent, pal.surface)); // the accent as text: always readable on this surface
   root.style.setProperty('--bg', pal.bg);
   root.style.setProperty('--surface', pal.surface);
   root.style.setProperty('--bg-image', prefs.bgImage ? `url("${prefs.bgImage}")` : 'none');

@@ -6,7 +6,7 @@ Stack: Vue 3 + Vite + Tailwind CSS (static site) and **Supabase** (database, log
 
 ## 1. Set up Supabase (free)
 1. Create a project at https://supabase.com.
-2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset), then `004_open_signup.sql` (anyone may create an account), then `005_user_lab_scan.sql` (students can scan a laboratory picture). Run all five in order; each is safe to run twice.
+2. **SQL editor**: paste and run `supabase/migrations/001_init.sql`, then `002_labs.sql` (laboratory schedule), then `003_hardening.sql` (security, clear sign-up errors, password reset), then `004_open_signup.sql` (anyone may create an account), then `005_user_lab_scan.sql` (students can scan a laboratory picture), then `006_validation.sql` (Student ID format YYYY-NNNNN, other input rules, and sign-up only for names in the schedule), then `007_requests.sql` (in-app reliever requests). Run all seven in order; each is safe to run twice.
    **Before you publish the site**, set the admin setup code so a stranger cannot become the admin:
    ```sql
    insert into public.app_config (id, admin_code) values (1, 'choose-a-long-secret')
@@ -39,11 +39,14 @@ npm test           # unit tests for the schedule, reliever and message logic
 ```
 Tip: if the project lives in a OneDrive/Dropbox folder, exclude `node_modules` from syncing. A half-synced `node_modules` causes confusing build errors such as "Could not resolve './lib/websocket-factory'"; delete `node_modules` and run `npm install` again to fix it.
 
+## 2b. What students see
+Five tabs (a bottom bar on phones): **Today** (your duty, the rooms that need cover, one tap to ask for a reliever), **Week** (your timetable with the laboratory hours marked), **Reliever** (the three-step flow for any day), **Requests** (the in-app inbox: accept or decline, and the answers to what you sent), and **Setup** (admin only). On a phone, use the browser's "Add to Home Screen" to install it; the build is a PWA and the app shell works offline (the schedule itself needs a connection).
+
 ## 3. First use
 - **The first account created becomes the admin**, so create yours first. If you set an admin setup code (step 1), the Create account form asks for it on that first account only.
 - **Admin, once:** import the S.A schedule (ITO DEPARTMENT sheet: yellow = duty, blue = class) and press **Save to database**. Then choose the **Laboratory Schedule picture**: FreeVer reads every room and its open hours automatically (needs the AI function, step 5). Check the table, make sure each row has a room name (for example `5501`), and press **Save laboratory schedule**.
 - **Every S.A** can also scan their own laboratory schedule picture on the "You" step (kept on their device only). FreeVer shows how the laboratory hours overlap their duty before generating.
-- **Every S.A:** register with your **Student ID** and **S.A name** (it must match the schedule), log in, pick the day(s) Monday-Saturday, and FreeVer compares each room's open hours with everyone's schedule. Relievers are chosen only from students who are **on duty (yellow) and not in class (blue)** at that hour, rotating the names. **White cells are non-working hours:** nobody is assigned from white automatically. In the review screen you can still pick an off-duty student by hand (Change > off-duty students), but only after confirming the supervisor approved it; the message then marks them **(OT)**.
+- **Every S.A:** register with your **Student ID** and **S.A name** (typed like the schedule, so your duty is found; if it doesn't match, search for your name on the first step), log in, pick the day(s) Monday-Saturday, and FreeVer compares each room's open hours with everyone's schedule. Relievers are chosen only from students who are **on duty (yellow) and not in class (blue)** at that hour, rotating the names. **White cells are non-working hours:** nobody is assigned from white automatically. In the review screen you can still pick an off-duty student by hand (Change > off-duty students), but only after confirming the supervisor approved it; the message then marks them **(OT)**.
 - Review the list (Leave/Absent re-picks the hour automatically; Change lets you choose anyone), then copy the message, which looks like this:
   ```
   @LJ's Temporary Relievers for Today
@@ -54,7 +57,7 @@ Tip: if the project lives in a OneDrive/Dropbox folder, exclude `node_modules` f
   9:00am - 10:00am — @Andrei (OT)
   ```
   You can change the title and closing line in Settings > Message.
-- Column order: by default the **first name of each pair is the right column**. Untick the box on the import screen to read it the other way. In the review screen each reliever has a "Columns look swapped?" link for a single block (this change is only for your session).
+- Column order: by default the **first name of each pair is the left column** (this matches the duty-hour totals printed in the sheet). Tick the box on the import screen if your sheet is the other way round. In the review screen each reliever has a "Columns look swapped?" link for a single block (this change is only for your session).
 
 ## Privacy and security notes
 - Names of other students are never listed: you only see your own name and the relievers you pick.

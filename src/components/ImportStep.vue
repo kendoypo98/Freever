@@ -3,9 +3,13 @@ import { ref, computed } from 'vue';
 import Icon from './Icon.vue';
 import { parseSpreadsheet } from '../lib/parseSheet.js';
 import { extractSchedule, checkSchedule, extractLabs } from '../lib/ai.js';
-import { saveSchedule, saveLabs } from '../lib/db.js';
-import { validateModel, DAYS, DAY_NAMES, fmtRange } from '../lib/schedule.js';
-import { state } from '../store.js';
+import { parseLabSpreadsheet } from '../lib/parseLabs.js';
+import LabRoomPicker from './LabRoomPicker.vue';
+import ColorKey from './ColorKey.vue';
+import { saveSchedule, saveLabs, loadSchedule } from '../lib/db.js';
+import { validateModel, DAYS, DAY_NAMES, fmtRange, signature } from '../lib/schedule.js';
+import { state, ask, resetFlow, goStep, showToast, cacheSchedule } from '../store.js';
+import { onBeforeUnmount, onMounted } from 'vue';
 
 const MAX_SHEET_BYTES = 10 * 1024 * 1024;
 const initials = (name) => name.split(/\s+/).map((w) => (w[0] || '').toUpperCase() + '.').join(' ');
@@ -13,7 +17,7 @@ const initials = (name) => name.split(/\s+/).map((w) => (w[0] || '').toUpperCase
 const input = ref(null);
 const labInput = ref(null);
 const buf = ref(null); // last Excel file, so the column switch can re-read it
-const firstIsRight = ref(true);
+const firstIsRight = ref(false); // the first name of a block owns the LEFT column (checked against the duty-hour totals in the sheet)
 const busy = ref('');
 const error = ref('');
 const saved = ref(false);
@@ -22,6 +26,12 @@ const labBusy = ref('');
 const labMsg = ref({ error: '', warnings: [], saved: false });
 
 const model = computed(() => state.model);
+// a schedule that was just read from a file exists only on this screen until Save is pressed
+const fresh = ref(false); // set when a file was just read, cleared once saved
+const unsaved = computed(() => !!state.model && fresh.value && !saved.value);
+const warnLeave = (e) => { if (unsaved.value) { e.preventDefault(); e.returnValue = ''; } };
+onMounted(() => window.addEventListener('beforeunload', warnLeave));
+onBeforeUnmount(() => window.removeEventListener('beforeunload', warnLeave));
 const dragging = ref(false);
 // the setup checklist: both parts must be saved before students can use the app
 const scheduleDone = computed(() => saved.value || !!state.uploadedAt);
@@ -37,7 +47,7 @@ async function readSheet(buffer, right) {
   const parsed = await parseSpreadsheet(buffer, { firstIsRight: right });
   if (!parsed.sas.length) throw new Error('No schedule found in this file. Duty must be filled yellow and class hours blue, and the sheet should be named "ITO". See "What the file should look like" below.');
   state.model = parsed;
-  saved.value = false;
+  saved.value = false; fresh.value = true;
   busy.value = 'Checking the schedule with AI...';
   try { aiWarnings.value = await checkSchedule(parsed); }
   catch (e) { aiWarnings.value = [`AI check skipped: ${e.message}`]; }
@@ -61,7 +71,7 @@ async function handleFile(file) {
       if (!m.sas.length) throw new Error(warnings[0] || 'The AI could not find the ITO department schedule in that picture.');
       buf.value = null;
       state.model = m;
-      saved.value = false;
+      saved.value = false; fresh.value = true;
       aiWarnings.value = [...warnings, 'Read from a picture by AI: please double-check the times. The Excel file is always more accurate.'];
     } else {
       throw new Error('Unsupported file. Use an .xlsx / .xls file or a PNG/JPEG screenshot.');
@@ -80,13 +90,53 @@ async function changeColumns() {
   try { await readSheet(buf.value, firstIsRight.value); } catch (e) { error.value = e.message; } finally { busy.value = ''; }
 }
 
+// Clearing saves an empty schedule: the database replaces everything in one step, so no new SQL is needed.
+async function clearSchedule() {
+  const ok = await ask({
+    title: 'Clear the S.A schedule?',
+    text: 'This deletes the saved duty and class schedule for everyone. Students cannot register or generate relievers until a new one is saved. Accounts are not deleted.',
+    okLabel: 'Clear schedule', danger: true,
+  });
+  if (!ok) return;
+  busy.value = 'Clearing the schedule...';
+  try {
+    await saveSchedule({ sas: [] }, firstIsRight.value);
+    state.model = null; state.uploadedAt = null; saved.value = false; buf.value = null; aiWarnings.value = [];
+    resetFlow(); goStep(0); // reliever lists built from the old schedule are no longer valid
+    showToast('Schedule cleared.');
+  } catch (e) { error.value = e.message; } finally { busy.value = ''; }
+}
+
+async function clearLabs() {
+  const ok = await ask({
+    title: 'Clear the laboratory schedule?',
+    text: 'This deletes the saved room hours for everyone. No relievers can be listed until a new laboratory schedule is saved.',
+    okLabel: 'Clear laboratory schedule', danger: true,
+  });
+  if (!ok) return;
+  labBusy.value = 'Clearing the laboratory schedule...';
+  try {
+    await saveLabs([]);
+    state.labs = []; state.pieces = []; state.assignments = {};
+    labsDirty.value = false; labPick.value = null; labMsg.value = { error: '', warnings: [], saved: false };
+    if (labImage.value) { URL.revokeObjectURL(labImage.value); labImage.value = ''; }
+    showToast('Laboratory schedule cleared.');
+  } catch (e) { labMsg.value = { ...labMsg.value, error: e.message }; } finally { labBusy.value = ''; }
+}
+
 async function save() {
   error.value = '';
   busy.value = 'Saving to the database...';
   try {
+    const sent = signature(state.model);
     await saveSchedule(state.model, firstIsRight.value);
-    saved.value = true;
-    state.uploadedAt = new Date().toISOString();
+    // read it back from the database: what a reload will show must be what was just saved
+    const back = await loadSchedule();
+    if (!back || signature(back.model) !== sent) throw new Error('The database did not keep the schedule exactly as saved. Press Save again, and tell the person who runs Supabase if it repeats.');
+    state.model = back.model; state.uploadedAt = back.uploadedAt;
+    cacheSchedule(back.model, back.uploadedAt); // the offline copy must not hold the old schedule
+    saved.value = true; fresh.value = false;
+    showToast('Saved. The database now holds this schedule.');
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -101,6 +151,7 @@ const toMin = (s) => { const [h, m] = String(s).split(':').map(Number); return N
 // placing the picture never needs AI: it is shown beside the time editor
 async function handleLab(file) {
   if (!file) return;
+  if (/\.(xlsx|xls|csv)$/i.test(file.name)) return handleLabExcel(file);
   if (!file.type.startsWith('image/')) { labMsg.value = { error: 'Please choose a picture (PNG or JPEG).', warnings: [], saved: false }; return; }
   if (labImage.value) URL.revokeObjectURL(labImage.value);
   labImage.value = URL.createObjectURL(file);
@@ -111,6 +162,19 @@ async function handleLab(file) {
   if (!state.labs.length) addLab();
 }
 let labFile = null;
+
+// the college schedule mapping as Excel: read exactly, no AI; the admin only ticks the rooms
+const labPick = ref(null); // { labs, skipped } of every room in the file
+async function handleLabExcel(file) {
+  if (labInput.value) labInput.value.value = '';
+  labMsg.value = { error: '', warnings: [], saved: false };
+  try { labPick.value = await parseLabSpreadsheet(await file.arrayBuffer()); }
+  catch (e) { labPick.value = null; labMsg.value = { error: e.message, warnings: [], saved: false }; }
+}
+function useRooms(labs) {
+  state.labs = labs; labsDirty.value = true; labPick.value = null;
+  labMsg.value = { error: '', warnings: ['Read exactly from the Excel file. Check the times, then save.'], saved: false };
+}
 
 function addLab() {
   state.labs = [...state.labs, { lab: '', day: 'MON', start: 7 * 60, end: 17 * 60 }];
@@ -161,10 +225,12 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
       </div>
     </div>
 
+    <ColorKey />
+
     <ul class="questlog" aria-label="Setup checklist">
-      <li :class="{ done: scheduleDone }"><span class="qcheck" aria-hidden="true">✓</span> Quest 1: import the S.A schedule</li>
-      <li :class="{ done: labsDone }"><span class="qcheck" aria-hidden="true">✓</span> Quest 2: scan the laboratory schedule</li>
-      <li v-if="scheduleDone && labsDone" class="done ready"><span class="qcheck" aria-hidden="true">★</span> All set! Students can start</li>
+      <li :class="{ done: scheduleDone }"><span class="qcheck" aria-hidden="true"><Icon name="check" :size="13" /></span> Quest 1: import the S.A schedule</li>
+      <li :class="{ done: labsDone }"><span class="qcheck" aria-hidden="true"><Icon name="check" :size="13" /></span> Quest 2: scan the laboratory schedule</li>
+      <li v-if="scheduleDone && labsDone" class="done ready"><span class="qcheck" aria-hidden="true"><Icon name="sparkles" :size="13" /></span> All set! Students can start</li>
     </ul>
 
     <label class="check">
@@ -197,7 +263,6 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
     <template v-if="model">
       <div class="row between wrap">
         <h3>Schedule loaded<template v-if="state.uploadedAt"> (saved {{ new Date(state.uploadedAt).toLocaleDateString() }})</template></h3>
-        <div class="legend"><span class="tag duty">Duty</span><span class="tag class">Class</span></div>
       </div>
       <div class="stats">
         <div><b>{{ model.sas.length }}</b><span>Student assistants</span></div>
@@ -212,24 +277,27 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
         <li v-for="(i, k) in issues" :key="'v' + k" class="warn">{{ mask(i.text) }}</li>
         <li v-for="(w, k) in aiWarnings" :key="'a' + k" class="ai"><Icon name="sparkles" :size="14" /> {{ mask(w) }}</li>
       </ul>
+      <p v-if="unsaved" class="notice err" role="alert"><Icon name="alert" :size="16" /> Not saved yet. This schedule exists only on your screen, so a reload brings back the old one. Press <b>Save to database</b>.</p>
       <div class="actions">
         <button class="primary" :disabled="!!busy || saved" @click="save">
           <Icon :name="saved ? 'check' : 'upload'" :size="16" /> {{ saved ? 'Saved to database' : 'Save to database' }}
         </button>
-        <button :disabled="!labMsg.saved && !labsLoaded" @click="state.step = 1">Continue <Icon name="right" :size="16" /></button>
+        <button :disabled="!labMsg.saved && !labsLoaded" @click="goStep(1)">Continue <Icon name="right" :size="16" /></button>
+        <button v-if="state.uploadedAt" class="danger" :disabled="!!busy" @click="clearSchedule"><Icon name="trash" :size="16" /> Clear schedule</button>
       </div>
     </template>
 
     <div class="labbox">
       <h3><Icon name="clock" :size="16" /> Laboratory schedule <span class="pill bad">required</span></h3>
       <p class="muted small">
-        Choose the picture of the laboratory schedule. FreeVer reads each room and its open hours automatically; check them, then save. Relievers are then listed per room, hour by hour, only while that room is open, and only students who are free at that time are suggested.
+        Choose the laboratory schedule: the Excel file is read exactly (you tick the rooms), or a picture is read by AI. FreeVer reads each room and its open hours automatically; check them, then save. Relievers are then listed per room, hour by hour, only while that room is open, and only students who are free at that time are suggested.
       </p>
       <div class="actions tight">
-        <button @click="labInput?.click()"><Icon name="image" :size="16" /> {{ labImage ? 'Replace picture' : 'Scan laboratory picture' }}</button>
+        <button @click="labInput?.click()"><Icon name="image" :size="16" /> {{ labImage ? 'Replace picture' : 'Choose Excel or picture' }}</button>
         <button v-if="labImage" :disabled="!!labBusy" @click="autoRead"><Icon name="sparkles" :size="16" /> Read the picture again</button>
-        <input ref="labInput" type="file" hidden accept="image/png,image/jpeg,image/webp" @change="handleLab($event.target.files[0])" />
+        <input ref="labInput" type="file" hidden accept=".xlsx,.xls,.csv,image/png,image/jpeg,image/webp" @change="handleLab($event.target.files[0])" />
       </div>
+      <LabRoomPicker v-if="labPick" :labs="labPick.labs" :skipped="labPick.skipped" @pick="useRooms" @cancel="labPick = null" />
       <p v-if="labBusy" class="notice" role="status"><Icon name="clock" :size="16" /> {{ labBusy }}</p>
       <p v-if="labMsg.error" class="notice err" role="alert"><Icon name="alert" :size="16" /> {{ labMsg.error }}</p>
       <ul v-if="labMsg.warnings.length" class="issues">
@@ -240,7 +308,7 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
         <img v-if="labImage" :src="labImage" alt="Laboratory schedule" class="labimg" />
         <div class="labtable">
           <div v-for="(l, i) in state.labs" :key="i" class="labrow">
-            <input type="text" :value="l.lab" placeholder="Room, e.g. 5501" aria-label="Laboratory room" @input="editLab(i, { lab: $event.target.value })" />
+            <input type="text" maxlength="60" :value="l.lab" placeholder="Room, e.g. 5501" aria-label="Laboratory room" @input="editLab(i, { lab: $event.target.value })" />
             <select :value="l.day" aria-label="Day" @change="editLab(i, { day: $event.target.value })">
               <option v-for="d in DAYS" :key="d" :value="d">{{ DAY_NAMES[d] }}</option>
             </select>
@@ -254,6 +322,7 @@ function onDrop(e) { handleFile(e.dataTransfer.files[0]); }
           <p v-if="unnamedLabs" class="warn small">Name every laboratory room (for example 5501) so relievers can be listed per room.</p>
           <div class="actions tight">
             <button @click="addLab"><Icon name="check" :size="16" /> Add time</button>
+            <button v-if="labsDone" class="danger" :disabled="!!labBusy" @click="clearLabs"><Icon name="trash" :size="16" /> Clear laboratory schedule</button>
             <button class="primary" :disabled="!labsValid || !!labBusy || labMsg.saved" @click="saveLab">
               <Icon :name="labMsg.saved ? 'check' : 'upload'" :size="16" /> {{ labMsg.saved ? 'Saved' : 'Save laboratory schedule' }}
             </button>

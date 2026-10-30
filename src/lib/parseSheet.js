@@ -218,7 +218,7 @@ function parseColorBlocks(XLSX, ws, firstIsRight) {
  * Parse xlsx/xls/csv ArrayBuffer into the normalized model.
  * For the colour-coded duty grid only the ITO DEPARTMENT sheet is read.
  */
-export async function parseSpreadsheet(buffer, { firstIsRight = true } = {}) {
+export async function parseSpreadsheet(buffer, { firstIsRight = false } = {}) {
   const XLSX = await import('xlsx'); // loaded on demand: it is by far the largest dependency
   // raw: keep CSV cells as text so "1-5" is not turned into a date; cellStyles: read yellow/blue fills
   const wb = XLSX.read(buffer, { type: 'array', raw: true, cellStyles: true, cellDates: false });

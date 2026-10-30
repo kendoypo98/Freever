@@ -446,9 +446,9 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-fun='1'] :is(.app, .drawer, .confirm) button.primary:not(:disabled) { box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 60%, #000); }
 :root[data-fun='1'] :is(.app, .drawer, .confirm) button:not(.icon-btn, .link, .swatch, .seg, .settings-tab):not(:disabled):hover { transform: translateY(-1px); }
 :root[data-fun='1'] :is(.app, .drawer, .confirm) button:not(.icon-btn, .link, .swatch, .seg, .settings-tab):not(:disabled):active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
-:root[data-fun='1'] .app :is(.card, .daybox) { border-width: 2px; border-radius: 20px; box-shadow: 0 5px 0 var(--border); }
-:root[data-fun='1'] .app .daycard { border-width: 2px; border-radius: 14px; box-shadow: 0 3px 0 var(--border); }
-:root[data-fun='1'] .app .daycard.on { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, #000), 0 0 0 2px var(--accent); }
+:root[data-game='1'] .app :is(.card, .daybox) { border-width: 2px; border-radius: 20px; box-shadow: 0 5px 0 var(--border); }
+:root[data-game='1'] .app .daycard { border-width: 2px; border-radius: 14px; box-shadow: 0 3px 0 var(--border); }
+:root[data-game='1'] .app .daycard.on { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, #000), 0 0 0 2px var(--accent); }
 :root[data-fun='1'] .app :is(.pill, .tag) { border-width: 2px; font-weight: 700; }
 :root[data-fun='1'] .app .badge-icon { border-radius: 14px; border-width: 2px; box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 35%, var(--border)); }
 :root[data-fun='1'] .app .avatar { border-width: 2px; box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 35%, var(--border)); }
@@ -514,18 +514,19 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 :root[data-fun='1'] .app .card { border-top: 6px solid var(--accent); box-shadow: 0 5px 0 var(--border), 0 0 34px -12px color-mix(in srgb, var(--accent) 45%, transparent); }
 
 /* quest panels: one per day, one banner per laboratory room */
-:root[data-fun='1'] .app .daybox { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
-:root[data-fun='1'] .app .daybox > .row h3 { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 2px solid var(--accent); }
-:root[data-fun='1'] .app .daybox > .row h3::before { content: '📜'; }
-:root[data-fun='1'] .app .labhead { display: inline-flex; align-items: center; gap: 8px; margin: 1.2rem 0 .2rem; padding: 4px 14px; border-radius: 12px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 2px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }
-:root[data-fun='1'] .app .labhead::before { content: '🧪'; }
+:root[data-game='1'] .app .daybox { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+:root[data-game='1'] .app .daybox > .row h3 { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 2px solid var(--accent); }
+:root[data-game='1'] .app :is(.daybox > .row h3, .labhead)::before { content: ''; flex: none; width: 1.15em; height: 1.15em; background: currentColor; -webkit-mask: var(--glyph) center / contain no-repeat; mask: var(--glyph) center / contain no-repeat; }
+:root[data-game='1'] .app .daybox > .row h3 { --glyph: var(--sc-day, var(--sp-calendar)); }
+:root[data-game='1'] .app .labhead { display: inline-flex; align-items: center; gap: 8px; margin: 1.2rem 0 .2rem; padding: 4px 14px; border-radius: 12px; font-weight: 800; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 2px solid color-mix(in srgb, var(--accent) 60%, var(--border)); }
+:root[data-game='1'] .app .labhead { --glyph: var(--sc-room, var(--sp-clock)); }
 
 /* one reliever slot = one character card; the colour is the "rarity": green on duty, purple overtime, grey empty */
 @keyframes freever-deal { from { transform: translateY(16px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* pick-a-day cards get a badge when chosen */
-:root[data-fun='1'] .app .daycard { position: relative; }
-:root[data-fun='1'] .app .daycard.on::after { content: '✓'; position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 800; font-size: .85rem; color: #fff; background: var(--accent); border: 2px solid var(--surface); }
+:root[data-game='1'] .app .daycard { position: relative; }
+:root[data-game='1'] .app .daycard.on::after { content: ''; position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent) var(--spw-check) center / 14px no-repeat; border: 2px solid var(--surface); }
 
 /* Pixel Quest keeps its square, hard-shadow look */
 :root[data-style='pixel'] .app .card { border-top: 8px solid var(--accent); }
@@ -533,23 +534,21 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 
 /* ================= cards follow the chosen theme (Settings > Animated background) ================= */
 /* each scene supplies: --sc (accent), --sc-duty / --sc-ot (card colours), and the quest / room / corner icons */
-:root[data-scene='halloween'] { --sc: #c2410c; --sc-duty: #c2410c; --sc-ot: #7e22ce; --sc-day: '🎃'; --sc-room: '🦇'; --sc-deco: '🕸️'; }
-:root[data-scene='valentine'] { --sc: #be185d; --sc-duty: #be185d; --sc-ot: #9f1239; --sc-day: '💌'; --sc-room: '💕'; --sc-deco: '💖'; }
-:root[data-scene='christmas'] { --sc: #15803d; --sc-duty: #15803d; --sc-ot: #b91c1c; --sc-day: '🎁'; --sc-room: '🎄'; --sc-deco: '❄️'; }
-:root[data-scene='pixel'] { --sc: #0e7490; --sc-duty: #15803d; --sc-ot: #be185d; --sc-day: '🕹️'; --sc-room: '👾'; --sc-deco: '⭐'; }
+:root[data-scene='halloween'] { --sc: #c2410c; --sc-duty: #c2410c; --sc-ot: #7e22ce; --sc-day: var(--sp-pumpkin); --sc-room: var(--sp-bat); }
+:root[data-scene='valentine'] { --sc: #be185d; --sc-duty: #be185d; --sc-ot: #9f1239; --sc-day: var(--sp-envelope); --sc-room: var(--sp-heart); }
+:root[data-scene='christmas'] { --sc: #15803d; --sc-duty: #15803d; --sc-ot: #b91c1c; --sc-day: var(--sp-gift); --sc-room: var(--sp-tree); }
+:root[data-scene='pixel'] { --sc: #0e7490; --sc-duty: #15803d; --sc-ot: #be185d; --sc-day: var(--sp-joystick); --sc-room: var(--sp-invader); }
 :root[data-theme='dark'][data-scene='halloween'] { --sc: #fb923c; --sc-duty: #fb923c; --sc-ot: #c084fc; }
 :root[data-theme='dark'][data-scene='valentine'] { --sc: #f472b6; --sc-duty: #f472b6; --sc-ot: #fb7185; }
 :root[data-theme='dark'][data-scene='christmas'] { --sc: #4ade80; --sc-duty: #4ade80; --sc-ot: #f87171; }
 :root[data-theme='dark'][data-scene='pixel'] { --sc: #22d3ee; --sc-duty: #4ade80; --sc-ot: #f472b6; }
 
 :root[data-fun='1'] .app .card { border-top-color: var(--sc, var(--accent)); box-shadow: 0 5px 0 var(--border), 0 0 34px -12px color-mix(in srgb, var(--sc, var(--accent)) 50%, transparent); }
-:root[data-fun='1'] .app .daybox { background: color-mix(in srgb, var(--sc, var(--accent)) 5%, var(--surface)); }
-:root[data-fun='1'] .app .daybox > .row h3 { color: var(--sc, var(--accent)); border-color: var(--sc, var(--accent)); background: color-mix(in srgb, var(--sc, var(--accent)) 12%, var(--surface)); }
-:root[data-fun='1'] .app .daybox > .row h3::before { content: var(--sc-day, '📜'); }
-:root[data-fun='1'] .app .labhead { color: var(--sc, var(--accent)); border-color: color-mix(in srgb, var(--sc, var(--accent)) 60%, var(--border)); background: color-mix(in srgb, var(--sc, var(--accent)) 10%, var(--surface)); }
-:root[data-fun='1'] .app .labhead::before { content: var(--sc-room, '🧪'); }
-:root[data-fun='1'] .app .daycard.on { border-color: var(--sc, var(--accent)); box-shadow: 0 3px 0 color-mix(in srgb, var(--sc, var(--accent)) 60%, #000), 0 0 0 2px var(--sc, var(--accent)); }
-:root[data-fun='1'] .app .daycard.on::after { background: var(--sc, var(--accent)); }
+:root[data-game='1'] .app .daybox { background: color-mix(in srgb, var(--sc, var(--accent)) 5%, var(--surface)); }
+:root[data-game='1'] .app .daybox > .row h3 { color: var(--sc, var(--accent)); border-color: var(--sc, var(--accent)); background: color-mix(in srgb, var(--sc, var(--accent)) 12%, var(--surface)); }
+:root[data-game='1'] .app .labhead { color: var(--sc, var(--accent)); border-color: color-mix(in srgb, var(--sc, var(--accent)) 60%, var(--border)); background: color-mix(in srgb, var(--sc, var(--accent)) 10%, var(--surface)); }
+:root[data-game='1'] .app .daycard.on { border-color: var(--sc, var(--accent)); box-shadow: 0 3px 0 color-mix(in srgb, var(--sc, var(--accent)) 60%, #000), 0 0 0 2px var(--sc, var(--accent)); }
+:root[data-game='1'] .app .daycard.on::after { background-color: var(--sc, var(--accent)); }
 .quest-fill { background: linear-gradient(90deg, var(--sc, var(--accent)), color-mix(in srgb, var(--sc, var(--accent)) 55%, #fde047)); }
 :root[data-style='pixel'] .quest-fill { background: repeating-linear-gradient(90deg, var(--sc, var(--accent)) 0 10px, transparent 10px 12px); }
 :root[data-style='pixel'] .app .card { border-top-color: var(--sc, var(--accent)); }
@@ -583,37 +582,37 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 .rcard .alts { grid-column: auto; }
 
 /* Game style: the ornate trading card */
-:root[data-fun='1'] .app .rcard {
+:root[data-game='1'] .app .rcard {
   padding: 7px; gap: 7px; color: var(--text);
   border: 4px solid var(--ink); border-radius: 20px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 70%, #fff), var(--rar) 45%, color-mix(in srgb, var(--rar) 55%, #000));
   box-shadow: 0 6px 0 #0d0a1a, 0 0 30px -6px var(--rar);
   transition: transform .2s;
 }
-:root[data-fun='1'] .app .rcard:hover { transform: translateY(-4px) rotate(-.6deg); }
-:root[data-fun='1'] .app .rc-title { background: var(--surface); border: 3px solid var(--ink); border-radius: 12px; box-shadow: inset 0 0 0 2px var(--rar); padding: 9px 36px; }
-:root[data-fun='1'] .app .rc-gem { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--ink); }
-:root[data-fun='1'] .app .rc-gem.left { left: -10px; } :root[data-fun='1'] .app .rc-gem.right { right: -10px; }
-:root[data-fun='1'] .app .rc-art {
+:root[data-game='1'] .app .rcard:hover { transform: translateY(-4px) rotate(-.6deg); }
+:root[data-game='1'] .app .rc-title { background: var(--surface); border: 3px solid var(--ink); border-radius: 12px; box-shadow: inset 0 0 0 2px var(--rar); padding: 9px 36px; }
+:root[data-game='1'] .app .rc-gem { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--ink); }
+:root[data-game='1'] .app .rc-gem.left { left: -10px; } :root[data-game='1'] .app .rc-gem.right { right: -10px; }
+:root[data-game='1'] .app .rc-art {
   min-height: 160px; border: 3px solid var(--ink); border-radius: 12px; overflow: hidden;
   background:
     radial-gradient(circle at 50% 55%, rgba(255, 255, 255, .8), transparent 52%),
     repeating-conic-gradient(from 0deg at 50% 55%, color-mix(in srgb, var(--rar) 55%, #fff) 0 9deg, color-mix(in srgb, var(--rar) 80%, #000) 9deg 18deg);
 }
-:root[data-fun='1'] .app .rc-art::before, :root[data-fun='1'] .app .rc-art::after { position: absolute; color: #fff; text-shadow: 0 0 6px var(--rar); animation: freever-twinkle 2.4s ease-in-out infinite; }
-:root[data-fun='1'] .app .rc-art::before { content: '✦'; top: 14px; right: 22px; font-size: 1.2rem; }
-:root[data-fun='1'] .app .rc-art::after { content: '✦'; left: 26px; bottom: 16px; font-size: .9rem; animation-delay: 1.1s; }
+:root[data-game='1'] .app .rc-art::before, :root[data-game='1'] .app .rc-art::after { position: absolute; background: #fff; --glyph: var(--sp-sparkle); -webkit-mask: var(--glyph) center / contain no-repeat; mask: var(--glyph) center / contain no-repeat; animation: freever-twinkle 2.4s ease-in-out infinite; }
+:root[data-game='1'] .app .rc-art::before { content: ''; top: 14px; right: 22px; width: 19px; height: 19px; }
+:root[data-game='1'] .app .rc-art::after { content: ''; left: 26px; bottom: 16px; width: 14px; height: 14px; animation-delay: 1.1s; }
 @keyframes freever-twinkle { 0%, 100% { opacity: .25; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
-:root[data-fun='1'] .app .rc-ribbon { top: -3px; left: 12px; padding: 6px 7px 16px; }
-:root[data-fun='1'] .app .rc-emblem { width: 100px; height: 108px; background: var(--ink); clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .35)); }
-:root[data-fun='1'] .app .rc-emblem .avatar { width: 90px; height: 98px; border: 0; border-radius: 0; font-size: 1.5rem; color: var(--rar); clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 25%, #fff), color-mix(in srgb, var(--rar) 8%, var(--surface))); box-shadow: none; }
-:root[data-fun='1'] .app .rc-band { position: relative; padding: 7px 12px; background: var(--ink); border-radius: 10px; }
-:root[data-fun='1'] .app .rc-type { color: #fff; }
-:root[data-fun='1'] .app .rc-stat { color: #fff; }
-:root[data-fun='1'] .app .rc-hex { width: 58px; height: 64px; margin: -16px 0; font-size: 1.5rem; text-shadow: 0 1px 0 rgba(0, 0, 0, .4); filter: drop-shadow(0 3px 0 #0d0a1a); }
-:root[data-fun='1'] .app .rc-hex::before { inset: 0; background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 80%, #fff), var(--rar)); }
-:root[data-fun='1'] .app .rc-text { padding: 10px 12px 12px; background: color-mix(in srgb, var(--rar) 7%, var(--surface)); border: 3px solid var(--ink); border-radius: 12px; }
-:root[data-fun='1'] .app .rcard[data-rarity='none'] { filter: saturate(.55); }
+:root[data-game='1'] .app .rc-ribbon { top: -3px; left: 12px; padding: 6px 7px 16px; }
+:root[data-game='1'] .app .rc-emblem { width: 100px; height: 108px; background: var(--ink); clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .35)); }
+:root[data-game='1'] .app .rc-emblem .avatar { width: 90px; height: 98px; border: 0; border-radius: 0; font-size: 1.5rem; color: var(--rar); clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 25%, #fff), color-mix(in srgb, var(--rar) 8%, var(--surface))); box-shadow: none; }
+:root[data-game='1'] .app .rc-band { position: relative; padding: 7px 12px; background: var(--ink); border-radius: 10px; }
+:root[data-game='1'] .app .rc-type { color: #fff; }
+:root[data-game='1'] .app .rc-stat { color: #fff; }
+:root[data-game='1'] .app .rc-hex { width: 58px; height: 64px; margin: -16px 0; font-size: 1.5rem; text-shadow: 0 1px 0 rgba(0, 0, 0, .4); filter: drop-shadow(0 3px 0 #0d0a1a); }
+:root[data-game='1'] .app .rc-hex::before { inset: 0; background: linear-gradient(160deg, color-mix(in srgb, var(--rar) 80%, #fff), var(--rar)); }
+:root[data-game='1'] .app .rc-text { padding: 10px 12px 12px; background: color-mix(in srgb, var(--rar) 7%, var(--surface)); border: 3px solid var(--ink); border-radius: 12px; }
+:root[data-game='1'] .app .rcard[data-rarity='none'] { filter: saturate(.55); }
 
 /* Pixel style: square cards with hard edges */
 :root[data-style='pixel'] .app .rcard { border-radius: 0; box-shadow: 6px 6px 0 #0d0a1a; }
@@ -645,20 +644,20 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 .rcard .alts { padding: 6px; }
 .rcard .alt { padding: .3rem .4rem; font-size: .72rem; flex-wrap: wrap; }
 
-:root[data-fun='1'] .app .rcard { padding: 5px; gap: 5px; border-width: 3px; border-radius: 16px; box-shadow: 0 4px 0 #0d0a1a, 0 0 22px -6px var(--rar); }
-:root[data-fun='1'] .app .rc-title { padding: 6px 22px; border-width: 2px; border-radius: 9px; }
-:root[data-fun='1'] .app .rc-gem { width: 24px; height: 24px; border-width: 2px; }
-:root[data-fun='1'] .app .rc-gem.left { left: -8px; } :root[data-fun='1'] .app .rc-gem.right { right: -8px; }
-:root[data-fun='1'] .app .rc-art { min-height: 104px; border-width: 2px; border-radius: 9px; }
-:root[data-fun='1'] .app .rc-art::before { top: 8px; right: 14px; font-size: .9rem; }
-:root[data-fun='1'] .app .rc-art::after { left: 16px; bottom: 10px; font-size: .7rem; }
-:root[data-fun='1'] .app .rc-ribbon { top: -2px; left: 8px; padding: 4px 5px 11px; }
-:root[data-fun='1'] .app .rc-emblem { width: 68px; height: 74px; }
-:root[data-fun='1'] .app .rc-emblem .avatar { width: 61px; height: 67px; font-size: 1.1rem; }
-:root[data-fun='1'] .app .rc-band { padding: 4px 8px; border-radius: 8px; }
-:root[data-fun='1'] .app .rc-hex { width: 40px; height: 44px; margin: -12px 0; font-size: 1.1rem; }
-:root[data-fun='1'] .app .rc-text { padding: 7px 8px 9px; border-width: 2px; border-radius: 9px; }
-:root[data-fun='1'] .app .rcard:hover { transform: translateY(-3px) rotate(-.5deg); }
+:root[data-game='1'] .app .rcard { padding: 5px; gap: 5px; border-width: 3px; border-radius: 16px; box-shadow: 0 4px 0 #0d0a1a, 0 0 22px -6px var(--rar); }
+:root[data-game='1'] .app .rc-title { padding: 6px 22px; border-width: 2px; border-radius: 9px; }
+:root[data-game='1'] .app .rc-gem { width: 24px; height: 24px; border-width: 2px; }
+:root[data-game='1'] .app .rc-gem.left { left: -8px; } :root[data-game='1'] .app .rc-gem.right { right: -8px; }
+:root[data-game='1'] .app .rc-art { min-height: 104px; border-width: 2px; border-radius: 9px; }
+:root[data-game='1'] .app .rc-art::before { top: 8px; right: 14px; font-size: .9rem; }
+:root[data-game='1'] .app .rc-art::after { left: 16px; bottom: 10px; font-size: .7rem; }
+:root[data-game='1'] .app .rc-ribbon { top: -2px; left: 8px; padding: 4px 5px 11px; }
+:root[data-game='1'] .app .rc-emblem { width: 68px; height: 74px; }
+:root[data-game='1'] .app .rc-emblem .avatar { width: 61px; height: 67px; font-size: 1.1rem; }
+:root[data-game='1'] .app .rc-band { padding: 4px 8px; border-radius: 8px; }
+:root[data-game='1'] .app .rc-hex { width: 40px; height: 44px; margin: -12px 0; font-size: 1.1rem; }
+:root[data-game='1'] .app .rc-text { padding: 7px 8px 9px; border-width: 2px; border-radius: 9px; }
+:root[data-game='1'] .app .rcard:hover { transform: translateY(-3px) rotate(-.5deg); }
 
 @media (max-width: 560px) { .rgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 10px; } }
 
@@ -666,7 +665,7 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 /* ================= import screens (admin import, student laboratory scan) ================= */
 .questlog { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0 0 14px; }
 .questlog li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; border: 2px solid var(--border); background: var(--surface); color: var(--muted); font-size: .85rem; font-weight: 700; }
-.qcheck { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--surface); font-size: .72rem; }
+.qcheck { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--border); color: var(--surface); }
 .questlog li.done { color: var(--ok); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
 .questlog li.done .qcheck { background: var(--ok); color: var(--on-rar); }
 .questlog li.ready { animation: freever-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
@@ -687,10 +686,10 @@ details > summary { cursor: pointer; margin: .6rem 0 0; font-weight: 600; }
 /* stat cards */
 :root[data-fun='1'] .app .stats div, :root[data-fun='1'] .app .daystats div { position: relative; border: 2px solid var(--border); border-radius: 14px; box-shadow: 0 3px 0 var(--border); }
 :root[data-fun='1'] .app .stats b { color: var(--sc, var(--accent)); font-weight: 800; }
-:root[data-fun='1'] .app .stats div::before { font-size: 1.25rem; line-height: 1; margin-bottom: 2px; }
-:root[data-fun='1'] .app .stats div:nth-child(1)::before { content: '👥'; }
-:root[data-fun='1'] .app .stats div:nth-child(2)::before { content: '⚔️'; }
-:root[data-fun='1'] .app .stats div:nth-child(3)::before { content: '📚'; }
+:root[data-fun='1'] .app .stats div::before { content: ''; display: block; width: 1.4rem; height: 1.4rem; margin: 0 auto 4px; background: var(--sc, var(--accent)); -webkit-mask: var(--glyph) center / contain no-repeat; mask: var(--glyph) center / contain no-repeat; }
+:root[data-fun='1'] .app .stats div:nth-child(1)::before { --glyph: var(--sp-users); }
+:root[data-fun='1'] .app .stats div:nth-child(2)::before { --glyph: var(--sp-clock); }
+:root[data-fun='1'] .app .stats div:nth-child(3)::before { --glyph: var(--sp-calendar); }
 :root[data-fun='1'] .app .daystats b { color: var(--sc, var(--accent)); }
 
 /* section banners */
@@ -734,7 +733,7 @@ input, select, textarea { font-size: 16px; }
 
 /* no hover effects on touch screens (they stick after a tap) */
 @media (hover: none) {
-  :root[data-fun='1'] .app .rcard:hover, :root[data-fun='1'] .app .drop:hover, .daycard:hover { transform: none; }
+  :root[data-game='1'] .app .rcard:hover, :root[data-game='1'] .app .drop:hover, .daycard:hover { transform: none; }
 }
 
 /* tablets and desktops: the steps move up into the header */
@@ -819,9 +818,9 @@ input, select, textarea { font-size: 16px; }
 @keyframes freever-lights { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
 /* candy-cane frames on the reliever cards, snowflake sparkles in the art */
-:root[data-scene='christmas'][data-fun='1'] .app .rcard:not([data-rarity='none']) { background: repeating-linear-gradient(45deg, #dc2626 0 9px, #f8fafc 9px 18px); }
-:root[data-scene='christmas'][data-fun='1'] .app .rc-art::before { content: '❄'; }
-:root[data-scene='christmas'][data-fun='1'] .app .rc-art::after { content: '❄'; }
+:root[data-scene='christmas'][data-game='1'] .app .rcard:not([data-rarity='none']) { background: repeating-linear-gradient(45deg, #dc2626 0 9px, #f8fafc 9px 18px); }
+:root[data-scene='christmas'][data-game='1'] .app .rc-art::before { --glyph: var(--sp-snowflake); }
+:root[data-scene='christmas'][data-game='1'] .app .rc-art::after { --glyph: var(--sp-snowflake); }
 :root[data-scene='christmas'][data-fun='1'] .app .card { border-top-style: dashed; }
 
 @media (prefers-reduced-motion: reduce) {

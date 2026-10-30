@@ -10,6 +10,8 @@ defineProps({
   autocomplete: { type: String, default: 'off' },
   enterkeyhint: { type: String, default: undefined },
   minlength: { type: Number, default: undefined },
+  maxlength: { type: Number, default: undefined },
+  inputmode: { type: String, default: undefined },
   hint: { type: String, default: '' },
   error: { type: Boolean, default: false },
 });
@@ -37,6 +39,8 @@ const model = defineModel({ type: String, default: '' });
           :autocomplete="autocomplete"
           :enterkeyhint="enterkeyhint"
           :minlength="minlength"
+          :maxlength="maxlength"
+          :inputmode="inputmode"
           autocapitalize="none"
           autocorrect="off"
           required
