@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { validateRegistration, PASSWORD_MIN, PASSWORD_MAX } from './validate.js';
 
 const BAD_LOGIN = 'Wrong Student ID / S.A name or password.';
 
@@ -18,6 +19,9 @@ const REGISTRATION_PROBLEMS = {
   name_taken: 'That S.A name already has an account. Log in instead, or ask the admin to reset your password.',
   setup_code_required: 'This is the first account (the admin). Enter the admin setup code.',
   bad_setup_code: 'That admin setup code is not correct.',
+  not_in_schedule: 'That S.A name is not in the schedule. Type it exactly as the admin imported it, or ask the admin to check the schedule.',
+  bad_student_id: 'Student ID must be in the format YYYY-NNNNN, for example 2024-00123.',
+  bad_name: 'S.A name: 3-60 letters. Spaces, dots, dashes, apostrophes and brackets are allowed; no numbers.',
 };
 
 /** True while no account exists yet, so the Create account form should ask for the admin setup code. */
@@ -29,9 +33,8 @@ export async function needsSetup() {
 export async function register(studentId, saName, password, adminCode = '') {
   const sid = studentId.trim();
   const name = saName.trim().replace(/\s+/g, ' ');
-  if (!/^[A-Za-z0-9-]{3,20}$/.test(sid)) throw new Error('Student ID: 3-20 letters, numbers or dashes.');
-  if (name.length < 3) throw new Error('Enter your full S.A name.');
-  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+  const problem = validateRegistration({ studentId: sid, name, password });
+  if (problem) throw new Error(problem);
 
   // ask the database first: a failed sign-up trigger only ever comes back as an unexplained 500
   const { data: verdict, error: checkError } = await supabase.rpc('check_registration', {
@@ -46,6 +49,9 @@ export async function register(studentId, saName, password, adminCode = '') {
   });
   if (error) {
     const m = error.message || '';
+    if (/not in the schedule/.test(m)) throw new Error(REGISTRATION_PROBLEMS.not_in_schedule);
+    if (/format YYYY-NNNNN/.test(m)) throw new Error(REGISTRATION_PROBLEMS.bad_student_id);
+    if (/3-60 letters/.test(m)) throw new Error(REGISTRATION_PROBLEMS.bad_name);
     if (/profiles_student_id_key|student_id/i.test(m)) throw new Error('That Student ID already has an account.');
     if (/setup code/i.test(m)) throw new Error(REGISTRATION_PROBLEMS.bad_setup_code);
     if (/profiles_sa_name_key|sa_name/i.test(m)) throw new Error('That S.A name already has an account.');
@@ -70,13 +76,14 @@ export const logout = () => supabase.auth.signOut();
 
 /** Signed-in user changes their own password. */
 export async function changePassword(password) {
-  if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) throw new Error(`Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters.`);
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw new Error(error.message);
 }
 
 /** Admin sets a temporary password for a student who is locked out. */
 export async function resetPasswordFor(target, password) {
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) throw new Error(`Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters.`);
   const { error } = await supabase.rpc('admin_reset_password', { target: target.trim(), new_password: password });
   if (error) throw new Error(error.message);
 }

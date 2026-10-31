@@ -76,6 +76,10 @@ Extract every period in which a laboratory is in use.
 - "lab" is the room/lab name or number exactly as written (empty string if the picture has only one lab and no name).
 - Days are MON, TUE, WED, THU, FRI, SAT only. Times are 24-hour HH:MM (convert 1:00 PM to 13:00).
 - Ignore teacher names, subject codes and section names; only the room, day and time matter.
+- Skip any row whose instructor says DELETED or DISSOLVED: that section no longer exists.
+- Day codes can combine: M, T, W, Th, F, S, MW, MWF, TTh, WF. Output one entry per real day (MW = MON and WED).
+- Times are written as 7:00 AM, 12:00 PM, 1:00 PM and so on: convert exactly, and do not shift PM times.
+- Never merge sessions across a gap, and never output overlapping blocks for the same lab and day.
 - Never invent data. If something is unreadable or ambiguous, add a short sentence to "warnings".
 Reply with ONLY a JSON object of this exact shape:
 {"labs":[{"lab":"IT LAB 1","day":"MON","start":"07:30","end":"10:30"}],"warnings":["..."]}`;
@@ -151,7 +155,7 @@ Deno.serve(async (req) => {
       if (!/^image\/(png|jpeg|webp|gif)$/.test(mime)) return json({ error: 'Only PNG, JPEG, WEBP or GIF images.' }, 400);
       if (!data || data.length > MAX_IMAGE_CHARS) return json({ error: 'Image missing or too large (max about 4 MB).' }, 413);
       const out = await callGemini(key, [
-        { text: extractPrompt(body.firstIsRight !== false) },
+        { text: extractPrompt(body.firstIsRight === true) },
         { inline_data: { mime_type: mime, data } },
       ]);
       return json(out);

@@ -61,7 +61,7 @@ export function conflictsFor(sa, me, day, start, end) {
  *  ot   = not on duty (yellow) for the whole piece, so covering it is overtime (non-working hours).
  * Order: available (not on leave/absent), no class, on duty before overtime, then least busy, partner, lightest load.
  */
-export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
+export function rankCandidates({ model, me, piece, dateKey, absent, load, taken = new Set() }) {
   const list = [];
   for (const sa of model.sas) {
     if (sa.name === me.name) continue;
@@ -74,6 +74,7 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
       free: conflicts.length === 0,
       ot: isOvertime(sa, piece),
       conflicts,
+      taken: taken.has(sa.name), // already covering another room at the same time
       busyMins,
       status: absent[`${dateKey}|${sa.name}`] || null, // 'leave' | 'absent' | null
       load: load[sa.name] || 0,
@@ -82,6 +83,7 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
   list.sort(
     (a, b) =>
       (a.status ? 1 : 0) - (b.status ? 1 : 0) ||
+      (a.taken ? 1 : 0) - (b.taken ? 1 : 0) ||
       (b.free ? 1 : 0) - (a.free ? 1 : 0) ||
       (a.ot ? 1 : 0) - (b.ot ? 1 : 0) ||
       a.busyMins - b.busyMins ||
@@ -96,14 +98,26 @@ export function rankCandidates({ model, me, piece, dateKey, absent, load }) {
 export const isOvertime = (sa, slot) =>
   !sa.shifts.some((s) => s.type === 'duty' && s.day === slot.day && s.start <= slot.start && s.end >= slot.end);
 
+/** Names already assigned to a different slot that overlaps `slot` on the same day (one person cannot be in two rooms at once). */
+export function takenAt(pieces, assignments, slot) {
+  const key = pieceKey(slot);
+  const out = new Set();
+  for (const p of pieces) {
+    const n = assignments[pieceKey(p)];
+    if (n && p.day === slot.day && pieceKey(p) !== key && overlaps(p, slot)) out.add(n);
+  }
+  return out;
+}
+
 /**
  * Best reliever for one slot, or null when nobody on duty is available for the whole slot.
  *  - avoid: names to skip when someone else is free (rotation / "next person")
+ *  - taken: names already covering another room at the same time (never picked)
  *  - random: pick among equally good people so Regenerate can give another valid result
  */
-export function pickReliever({ model, me, slot, dateKey, absent, load, avoid = new Set(), random = false }) {
+export function pickReliever({ model, me, slot, dateKey, absent, load, avoid = new Set(), random = false, taken = new Set() }) {
   // only students who are on duty and have no class: overtime needs a supervisor's approval, so it is never automatic
-  const free = rankCandidates({ model, me, piece: slot, dateKey, absent, load }).filter((c) => c.free && !c.ot && !c.status);
+  const free = rankCandidates({ model, me, piece: slot, dateKey, absent, load, taken }).filter((c) => c.free && !c.ot && !c.status && !c.taken);
   if (!free.length) return null;
   // the block partner is the natural cover and is never rotated away
   const fresh = free.filter((c) => c.partner || !avoid.has(c.name));
@@ -122,14 +136,18 @@ export function generateSlots({ model, me, shifts, dates, absent, labs, avoid = 
   const pieces = buildSlots(shifts, labs);
   const assignments = {};
   const load = { ...load0 };
-  let prev = null; // { day, lab, name } of the previous slot, for rotation
-  for (const slot of pieces) {
+  const prev = new Map(); // `${day}|${lab}` -> name of the previous slot in that room, for rotation
+  // time order across all rooms, so a person picked for one room is known to be busy when the next room is filled
+  const ordered = [...pieces].sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || a.start - b.start || a.lab.localeCompare(b.lab));
+  for (const slot of ordered) {
     const rotate = new Set(avoid);
-    if (prev && prev.day === slot.day && prev.lab === slot.lab && prev.name) rotate.add(prev.name);
-    const name = pickReliever({ model, me, slot, dateKey: dates[slot.day], absent, load, avoid: rotate, random });
+    const before = prev.get(`${slot.day}|${slot.lab}`);
+    if (before) rotate.add(before);
+    const taken = takenAt(pieces, assignments, slot);
+    const name = pickReliever({ model, me, slot, dateKey: dates[slot.day], absent, load, avoid: rotate, random, taken });
     assignments[pieceKey(slot)] = name;
     if (name) load[name] = (load[name] || 0) + (slot.end - slot.start);
-    prev = { day: slot.day, lab: slot.lab, name };
+    prev.set(`${slot.day}|${slot.lab}`, name);
   }
   return { pieces, assignments };
 }

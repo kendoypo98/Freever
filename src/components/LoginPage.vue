@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import Icon from './Icon.vue';
 import FloatField from './FloatField.vue';
 import { login, register, needsSetup } from '../lib/auth.js';
+import { formatStudentId, PASSWORD_MIN, PASSWORD_MAX } from '../lib/validate.js';
 import { configured } from '../lib/supabase.js';
 import { state, enter } from '../store.js';
 
@@ -13,6 +14,7 @@ const isLogin = computed(() => mode.value === 'login');
 const identifier = ref(''); // login: Student ID or S.A name
 const studentId = ref('');
 const saName = ref('');
+watch(studentId, (v) => { const f = formatStudentId(v); if (f !== v) studentId.value = f; }); // digits only, dash added for you
 const password = ref('');
 const adminCode = ref('');
 const firstAccount = ref(false); // no account exists yet: this one becomes the admin
@@ -116,17 +118,17 @@ function setMode(m) {
             placeholder="e.g. 2024-00123 or Juan Dela Cruz" autocomplete="username" enterkeyhint="next" :error="!!error" />
 
           <template v-else>
-            <FloatField v-model="studentId" label="Student ID" icon="user" placeholder="e.g. 2024-00123"
-              enterkeyhint="next" />
+            <FloatField v-model="studentId" label="Student ID" icon="user" placeholder="YYYY-NNNNN, e.g. 2024-00123"
+              enterkeyhint="next" inputmode="numeric" :maxlength="10" hint="Format: YYYY-NNNNN" />
             <FloatField v-model="saName" label="S.A name" icon="users" placeholder="e.g. Juan Dela Cruz"
-              autocomplete="name" enterkeyhint="next" hint="Type it as written in the schedule so your duty days are found." />
+              autocomplete="name" enterkeyhint="next" :maxlength="60" hint="Type it as written in the schedule so your duty days are found." />
             <FloatField v-if="firstAccount" v-model="adminCode" label="Admin setup code" icon="lock" type="password"
               autocomplete="off" enterkeyhint="next" hint="You are the first user, so this account becomes the admin. Use the setup code from your database setup." />
           </template>
 
           <FloatField v-model="password" label="Password" icon="lock" :type="showPw ? 'text' : 'password'"
             :placeholder="isLogin ? 'Your password' : 'At least 8 characters'"
-            :autocomplete="isLogin ? 'current-password' : 'new-password'" :minlength="isLogin ? undefined : 8"
+            :autocomplete="isLogin ? 'current-password' : 'new-password'" :minlength="isLogin ? undefined : PASSWORD_MIN" :maxlength="PASSWORD_MAX"
             enterkeyhint="go" :error="!!error && isLogin">
             <template #end>
               <button type="button" class="icon-btn !p-1.5" :aria-label="showPw ? 'Hide password' : 'Show password'" @click="showPw = !showPw">

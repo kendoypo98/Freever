@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue';
 import Icon from './Icon.vue';
 import { extractLabs } from '../lib/ai.js';
+import { parseLabSpreadsheet } from '../lib/parseLabs.js';
+import LabRoomPicker from './LabRoomPicker.vue';
 import { DAYS, DAY_NAMES } from '../lib/schedule.js';
 import { state, setMyLabs, clearMyLabs, showToast } from '../store.js';
 
@@ -17,8 +19,18 @@ const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m %
 const toMin = (s) => { const [h, m] = String(s).split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : 0; };
 const blank = () => ({ lab: '', day: 'MON', start: 7 * 60, end: 17 * 60 });
 
+const pick = ref(null); // an Excel file: every room in it, the student ticks theirs
+async function onExcel(file) {
+  error.value = ''; warnings.value = []; draft.value = null;
+  try { pick.value = await parseLabSpreadsheet(await file.arrayBuffer()); }
+  catch (e) { pick.value = null; error.value = e.message; }
+  if (input.value) input.value.value = '';
+}
+function useRooms(labs) { draft.value = labs; pick.value = null; warnings.value = ['Read exactly from the Excel file. Check the times, then press Use this schedule.']; }
+
 async function onFile(file) {
   if (!file) return;
+  if (/\.(xlsx|xls|csv)$/i.test(file.name)) return onExcel(file);
   error.value = ''; warnings.value = [];
   if (preview.value) URL.revokeObjectURL(preview.value);
   preview.value = URL.createObjectURL(file);
@@ -66,11 +78,12 @@ function cancel() { draft.value = null; error.value = ''; warnings.value = []; }
 
     <div class="actions tight">
       <button type="button" :disabled="busy" @click="input?.click()">
-        <Icon name="image" :size="16" /> {{ state.labSource === 'mine' || draft ? 'Scan another picture' : 'Scan laboratory picture' }}
+        <Icon name="image" :size="16" /> {{ state.labSource === 'mine' || draft ? 'Choose another file' : 'Choose Excel or picture' }}
       </button>
       <button v-if="state.labSource === 'mine'" type="button" class="link small" @click="clearMyLabs">Use the admin schedule again</button>
-      <input ref="input" type="file" hidden accept="image/png,image/jpeg,image/webp" @change="onFile($event.target.files[0])" />
+      <input ref="input" type="file" hidden accept=".xlsx,.xls,.csv,image/png,image/jpeg,image/webp" @change="onFile($event.target.files[0])" />
     </div>
+    <LabRoomPicker v-if="pick" :labs="pick.labs" :skipped="pick.skipped" @pick="useRooms" @cancel="pick = null" />
     <p v-if="busy" class="notice" role="status"><Icon name="clock" :size="16" /> Reading the laboratory schedule...</p>
     <p v-if="error" class="notice err" role="alert"><Icon name="alert" :size="16" /> {{ error }}</p>
 
@@ -83,7 +96,7 @@ function cancel() { draft.value = null; error.value = ''; warnings.value = []; }
         <img v-if="preview" :src="preview" alt="Your laboratory schedule picture" class="labimg" />
         <div class="labtable">
           <div v-for="(l, i) in draft" :key="i" class="labrow">
-            <input type="text" :value="l.lab" placeholder="Room, e.g. 5501" aria-label="Laboratory room" @input="edit(i, { lab: $event.target.value })" />
+            <input type="text" maxlength="60" :value="l.lab" placeholder="Room, e.g. 5501" aria-label="Laboratory room" @input="edit(i, { lab: $event.target.value })" />
             <select :value="l.day" aria-label="Day" @change="edit(i, { day: $event.target.value })">
               <option v-for="d in DAYS" :key="d" :value="d">{{ DAY_NAMES[d] }}</option>
             </select>

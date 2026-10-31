@@ -113,14 +113,15 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
     <div class="scenes" role="group" aria-label="Animated background">
       <button v-for="s in SCENES" :key="s.id || 'none'" type="button" class="scene-btn" :class="{ on: (prefs.scene || '') === s.id }"
         :aria-pressed="(prefs.scene || '') === s.id" @click="prefs.scene = s.id">
-        <span aria-hidden="true">{{ s.icon }}</span> {{ s.name }}
+        <Icon :name="s.icon" :size="18" /> {{ s.name }}
       </button>
     </div>
     <p v-if="prefs.scene" class="muted small">A chosen scene replaces the background image below.</p>
 
-    <label class="check"><input v-model="prefs.sfx" type="checkbox" /> <span>Sound effects (button blips, level-up and success sounds)</span></label>
+    <label class="check"><input v-model="prefs.sfx" type="checkbox" /> <span>Interface sounds (soft tap on click, chime when something succeeds)</span></label>
     <template v-if="prefs.sfx">
       <label class="inline">Volume <input v-model.number="prefs.sfxVolume" type="range" min="0.05" max="1" step="0.05" aria-label="Sound effects volume" /></label>
+      <label class="check"><input v-model="prefs.sfxHover" type="checkbox" /> <span>Whisper-quiet sound when you hover a control (mouse only)</span></label>
       <button type="button" @click="sfx.success()">Test sound</button>
     </template>
 
@@ -134,6 +135,7 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
 
     <label class="inline">Text size <input v-model.number="prefs.fontSize" type="range" min="13" max="20" /></label>
     <label class="check"><input v-model="prefs.use24" type="checkbox" /> <span>24-hour time</span></label>
+    <label class="check"><input v-model="prefs.cards" type="checkbox" /> <span>Game cards in the reliever review (character cards, quest panels)</span></label>
     <label class="check"><input v-model="prefs.fun" type="checkbox" /> <span>Game style (chunky buttons, progress bar, confetti)</span></label>
 
     <div class="actions">
@@ -160,7 +162,7 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
     <h3>Account</h3>
     <form @submit.prevent="savePassword">
       <label>Change your password
-        <input v-model="pw" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" />
+        <input v-model="pw" type="password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="At least 8 characters" />
       </label>
       <div class="actions tight"><button class="primary" :disabled="pw.length < 8">Change password</button></div>
       <p v-if="pwMsg.text" class="notice small" :class="{ err: !pwMsg.ok }" :role="pwMsg.ok ? 'status' : 'alert'">{{ pwMsg.text }}</p>
@@ -173,7 +175,7 @@ function pickAccent(e) { state.prefs.accent = e.target.value; state.prefs.useCus
           <input v-model="target" type="text" autocomplete="off" />
         </label>
         <label>Temporary password
-          <input v-model="tempPw" type="text" autocomplete="off" minlength="8" placeholder="At least 8 characters" />
+          <input v-model="tempPw" type="text" autocomplete="off" minlength="8" maxlength="72" placeholder="At least 8 characters" />
         </label>
         <div class="actions tight"><button class="primary" :disabled="!target.trim() || tempPw.length < 8">Set temporary password</button></div>
         <p v-if="resetMsg.text" class="notice small" :class="{ err: !resetMsg.ok }" :role="resetMsg.ok ? 'status' : 'alert'">{{ resetMsg.text }}</p>

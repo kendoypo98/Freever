@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { state } from '../store.js';
+import { drawGlyph } from '../lib/sprites.js';
 
 // An animated seasonal / arcade background drawn on one canvas behind the whole app.
 // It stands still for people who prefer reduced motion and stops when the tab is hidden.
@@ -9,9 +10,9 @@ const canvas = ref(null);
 
 const PIXEL_COLORS = ['#22d3ee', '#f472b6', '#facc15', '#4ade80', '#a78bfa'];
 const CONFIG = {
-  valentine: { n: 26, kind: 'glyph', glyphs: ['❤️', '💖', '💗', '💕', '💘'], vy: [-48, -20], vx: [-8, 8], size: [18, 36], sway: 26 },
-  halloween: { n: 22, kind: 'glyph', glyphs: ['🎃', '🦇', '👻', '🦇', '🕷️'], vy: [-8, 8], vx: [-46, 46], size: [22, 40], sway: 18 },
-  christmas: { n: 110, kind: 'snow', glyphs: ['❄️', '⭐', '🎄', '🎁', '🔔', '🎅', '🦌', '❄️'], vy: [26, 70], vx: [-12, 12], size: [1.5, 4.5], sway: 14, glyphChance: 0.14 },
+  valentine: { n: 26, kind: 'glyph', glyphs: [['heart', '#e11d48'], ['heart', '#f472b6'], ['heart', '#be185d'], ['heart', '#fb7185'], ['sparkle', '#f9a8d4']], vy: [-48, -20], vx: [-8, 8], size: [18, 36], sway: 26 },
+  halloween: { n: 22, kind: 'glyph', glyphs: [['pumpkin', '#ea7a1c'], ['bat', '#7c5cbf'], ['ghost', '#9aa5b8'], ['bat', '#7c5cbf'], ['spider', '#6b7280']], vy: [-8, 8], vx: [-46, 46], size: [22, 40], sway: 18 },
+  christmas: { n: 110, kind: 'snow', glyphs: [['snowflake', '#93c5fd'], ['star', '#eab308'], ['tree', '#16a34a'], ['gift', '#dc2626'], ['bell', '#d9a406'], ['snowflake', '#bfdbfe']], vy: [26, 70], vx: [-12, 12], size: [1.5, 4.5], sway: 14, glyphChance: 0.14 },
   pixel: { n: 70, kind: 'pixel', vy: [30, 95], vx: [0, 0], size: [4, 10], sway: 0 },
 };
 
@@ -31,7 +32,7 @@ function spawn(cfg, initial) {
     x: rand(0, w), y: initial ? rand(0, h) : (cfg.vy[1] < 0 ? h + 40 : -40),
     vx: rand(...cfg.vx), vy: rand(...cfg.vy), size: rand(...cfg.size),
     rot: rand(-0.4, 0.4), vr: rand(-0.5, 0.5), phase: rand(0, 6.28), freq: rand(0.6, 1.6),
-    glyph: cfg.glyphs ? pick(cfg.glyphs) : '', color: pick(PIXEL_COLORS),
+    glyph: cfg.glyphs ? pick(cfg.glyphs) : ['star', '#fff'], color: pick(PIXEL_COLORS),
   };
   if (cfg.kind === 'snow' && Math.random() < (cfg.glyphChance || 0.07)) p.big = true; // some ornaments among the snow dots
   return p;
@@ -58,10 +59,7 @@ function draw(cfg, t) {
       ctx.globalAlpha = 0.85;
       ctx.translate(x, p.y);
       ctx.rotate(p.rot + Math.sin(t * p.freq + p.phase) * 0.25);
-      ctx.font = `${p.big ? Math.round(p.size * 5 + 12) : p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(p.glyph || '❄️', 0, 0);
+      drawGlyph(ctx, p.glyph[0], p.big ? Math.round(p.size * 5 + 12) : p.size, p.glyph[1]);
       ctx.restore();
     }
   }

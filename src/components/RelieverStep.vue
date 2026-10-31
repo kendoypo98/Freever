@@ -2,9 +2,9 @@
 import { ref, computed } from 'vue';
 import Icon from './Icon.vue';
 import { DAYS, DAY_NAMES, fmtRange, swapTeam, niceName, initialsOf } from '../lib/schedule.js';
-import { rankCandidates, generateSlots, pickReliever, isOvertime, pieceKey } from '../lib/reliever.js';
+import { rankCandidates, generateSlots, pickReliever, isOvertime, pieceKey, takenAt } from '../lib/reliever.js';
 import { formatDate } from '../lib/message.js';
-import { state, setResult, ask, showToast, isAdmin } from '../store.js';
+import { state, setResult, ask, showToast, isAdmin, goStep } from '../store.js';
 
 const STATUS_LABEL = { leave: 'on leave', absent: 'absent' };
 const notes = ref({}); // pieceKey -> why this person was picked
@@ -74,7 +74,7 @@ function markUnavailable(date, name, status) {
     delete asg[pieceKey(p)];
     const who = pickReliever({
       model: state.model, me: me.value, slot: p, dateKey: date, absent,
-      load: hoursOf(asg, state.pieces), avoid: new Set([name]),
+      load: hoursOf(asg, state.pieces), avoid: new Set([name]), taken: takenAt(state.pieces, asg, p),
     });
     asg[pieceKey(p)] = who;
     nextNotes[pieceKey(p)] = who
@@ -119,15 +119,15 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
       lab,
       rows: dayPieces.filter((p) => p.lab === lab).map((p) => {
         const key = pieceKey(p);
-        const cands = rankCandidates({ model: state.model, me: me.value, piece: p, dateKey: date, absent: state.absent, load: load.value });
+        const cands = rankCandidates({ model: state.model, me: me.value, piece: p, dateKey: date, absent: state.absent, load: load.value, taken: takenAt(state.pieces, state.assignments, p) });
         const current = state.assignments[key] || '';
         const cur = cands.find((c) => c.name === current);
         return {
           key, p, date, current, cur,
           ot: !!cur && isOvertime(state.model.sas.find((s) => s.name === current), p),
-          alternatives: cands.filter((c) => c.free && !c.ot && !c.status && c.name !== current).slice(0, 4),
-          overtime: cands.filter((c) => c.free && c.ot && !c.status && c.name !== current),
-          others: cands.filter((c) => c.name !== current && (!c.free || c.status)),
+          alternatives: cands.filter((c) => c.free && !c.ot && !c.status && !c.taken && c.name !== current).slice(0, 4),
+          overtime: cands.filter((c) => c.free && c.ot && !c.status && !c.taken && c.name !== current),
+          others: cands.filter((c) => c.name !== current && (!c.free || c.status || c.taken)),
         };
       }),
     })),
@@ -227,13 +227,14 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
               </button>
             </template>
             <button v-if="r.others.length" class="link small" :aria-expanded="!!showBusy[r.key]" @click="showBusy = { ...showBusy, [r.key]: !showBusy[r.key] }">
-              {{ showBusy[r.key] ? 'Hide' : 'Show' }} people in class or unavailable ({{ r.others.length }})
+              {{ showBusy[r.key] ? 'Hide' : 'Show' }} people in class, unavailable or in another room ({{ r.others.length }})
             </button>
             <template v-if="showBusy[r.key]">
               <button v-for="a in r.others" :key="'o' + a.name" class="alt" @click="a.ot ? setOvertime(r.key, a.name) : setPiece(r.key, a.name)">
                 <span class="avatar sm">{{ initialsOf(a.name) }}</span>
                 <b>{{ niceName(a.name) }}</b>
                 <span v-if="a.status" class="pill bad">{{ STATUS_LABEL[a.status] }}</span>
+                <span v-else-if="a.taken" class="pill bad">Already in another room at this time</span>
                 <span v-else class="pill bad">In class: {{ a.conflicts.map((c) => `${c.type} ${fmtRange(c.start, c.end, use24)}`).join(', ') }}</span>
               </button>
             </template>
@@ -255,9 +256,8 @@ const days = computed(() => DAYS.filter((d) => state.days.includes(d)).map((day)
     </div>
 
     <div class="actions">
-      <button @click="state.step = 1"><Icon name="left" :size="16" /> Back</button>
       <button @click="reshuffle"><Icon name="refresh" :size="16" /> Regenerate</button>
-      <button class="primary" @click="state.step = 3">Create message <Icon name="right" :size="16" /></button>
+      <button class="primary" @click="goStep(3)">Create message <Icon name="right" :size="16" /></button>
     </div>
 
   </section>
